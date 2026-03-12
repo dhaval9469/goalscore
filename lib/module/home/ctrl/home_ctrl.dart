@@ -1,4 +1,6 @@
 import 'package:get/get.dart';
+import 'package:goalscore/module/home/model/matches_model.dart';
+import 'package:goalscore/module/home/service/home_ser.dart';
 import 'package:intl/intl.dart';
 
 class HomeCtrl extends GetxController {
@@ -8,12 +10,6 @@ class HomeCtrl extends GetxController {
 
   List<DateTime> dates = [];
 
-  @override
-  void onInit() {
-    super.onInit();
-    generateDates();
-  }
-
   void generateDates() {
     DateTime start = DateTime(today.year, today.month - 2, today.day);
     DateTime end = DateTime(today.year, today.month + 2, today.day);
@@ -21,6 +17,8 @@ class HomeCtrl extends GetxController {
     for (int i = 0; i <= end.difference(start).inDays; i++) {
       dates.add(start.add(Duration(days: i)));
     }
+    String formattedDate = DateFormat('yyyyMMdd').format(today);
+    getMatches(date: formattedDate);
   }
 
   void selectDate(DateTime date) {
@@ -46,5 +44,28 @@ class HomeCtrl extends GetxController {
 
   bool isSame(DateTime a, DateTime b) {
     return a.day == b.day && a.month == b.month && a.year == b.year;
+  }
+
+  @override
+  void onInit() {
+    super.onInit();
+    generateDates();
+  }
+
+  RxBool isMatchesLoader = false.obs;
+
+  RxList<Leagues> leaguesList = <Leagues>[].obs;
+
+  Future<void> getMatches({String? date}) async {
+    try {
+      isMatchesLoader.value = true;
+      leaguesList.clear();
+      final data = await HomeService().matches();
+      leaguesList.addAll(data.leagues ?? []);
+      isMatchesLoader.value = false;
+    } catch (e) {
+      isMatchesLoader.value = false;
+      rethrow;
+    }
   }
 }
