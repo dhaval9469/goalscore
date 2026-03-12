@@ -6,5 +6,5 @@ mixin Routes {
 
   static const String homePage = "/homePage";
 
-  static List<GetPage<dynamic>> routes = [GetPage(name: homePage, page: () => const HomePage(), transition: defaultTransition)];
+  static List<GetPage<dynamic>> routes = [GetPage(name: homePage, page: () => HomePage(), transition: defaultTransition)];
 }

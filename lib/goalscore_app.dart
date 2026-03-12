@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:goalscore/module/home/ctrl/home_ctrl.dart';
 import 'package:goalscore/utils/routing.dart';
 
 class GoalScoreApp extends StatefulWidget {
@@ -24,6 +25,6 @@ class _GoalScoreAppState extends State<GoalScoreApp> {
 class AppBinding extends Bindings {
   @override
   void dependencies() {
-    // Get.put<TourCtrl>(TourCtrl());
+    Get.put<HomeCtrl>(HomeCtrl());
   }
 }
