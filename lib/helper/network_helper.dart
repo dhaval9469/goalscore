@@ -39,7 +39,8 @@ class NetworkAPICall {
     final client = http.Client();
     try {
       final String fullURL = "${AppConfig.baseUrl}$url";
-      final response = await client.get(Uri.parse(fullURL));
+      final response = await client.get(Uri.parse(fullURL),headers: header);
+
       if (response.statusCode == 200) {
         return checkResponse(response);
       }

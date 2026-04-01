@@ -8,7 +8,7 @@ class MatchesModel {
     if (json['leagues'] != null) {
       leagues = <Leagues>[];
       json['leagues'].forEach((v) {
-        leagues!.add(new Leagues.fromJson(v));
+        leagues!.add(Leagues.fromJson(v));
       });
     }
     date = json['date'];

@@ -1,14 +1,17 @@
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:goalscore/module/home/model/matches_model.dart';
 import 'package:goalscore/module/home/service/home_ser.dart';
 import 'package:intl/intl.dart';
 
-class HomeCtrl extends GetxController {
+class HomeCtrl extends GetxController with GetSingleTickerProviderStateMixin {
+  late TabController tabController;
+
   DateTime today = DateTime.now();
 
-  var selectedDate = DateTime.now().obs;
 
   List<DateTime> dates = [];
+  String lastLoadedDate = "";
 
   void generateDates() {
     DateTime start = DateTime(today.year, today.month - 2, today.day);
@@ -19,12 +22,6 @@ class HomeCtrl extends GetxController {
     }
     String formattedDate = DateFormat('yyyyMMdd').format(today);
     getMatches(date: formattedDate);
-  }
-
-  void selectDate(DateTime date) {
-    selectedDate.value = date;
-
-    String apiDate = DateFormat('yyyyMMdd').format(date);
   }
 
   String label(DateTime date) {
@@ -46,13 +43,27 @@ class HomeCtrl extends GetxController {
     return a.day == b.day && a.month == b.month && a.year == b.year;
   }
 
+  void _handleTabSelection() {
+    if (!tabController.indexIsChanging) {
+      String formattedDate = DateFormat('yyyyMMdd').format(dates[tabController.index]);
+      if (lastLoadedDate != formattedDate) {
+        getMatches(date: formattedDate);
+      }
+    }
+  }
+
   @override
   void onInit() {
     super.onInit();
     generateDates();
+    tabController = TabController(length: dates.length, vsync: this, initialIndex: getTodayIndex());
+    tabController.addListener(_handleTabSelection);
   }
 
   RxBool isMatchesLoader = false.obs;
+  RxBool isExpanded = false.obs;
+
+  RxInt eIndex = 0.obs;
 
   RxList<Leagues> leaguesList = <Leagues>[].obs;
 
@@ -60,7 +71,7 @@ class HomeCtrl extends GetxController {
     try {
       isMatchesLoader.value = true;
       leaguesList.clear();
-      final data = await HomeService().matches();
+      final data = await HomeService().matches(date: date);
       leaguesList.addAll(data.leagues ?? []);
       isMatchesLoader.value = false;
     } catch (e) {
