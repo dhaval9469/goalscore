@@ -36,12 +36,7 @@ class _HomePageState extends State<HomePage> {
                 backgroundColor: AppColor.header,
                 title: Text(
                   "Matches",
-                  style: tInter(
-                    context,
-                    fontWeight: FontWeight.bold,
-                    color: AppColor.bText,
-                    fontSize: context.sp(20),
-                  ),
+                  style: tInter(context, fontWeight: FontWeight.bold, color: AppColor.bText, fontSize: context.sp(20)),
                 ),
                 floating: true,
                 snap: true,
@@ -55,11 +50,7 @@ class _HomePageState extends State<HomePage> {
 
                     indicatorSize: TabBarIndicatorSize.label,
                     indicatorColor: AppColor.white,
-                    labelStyle: tMontserrat(
-                      context,
-                      color: AppColor.bText,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    labelStyle: tMontserrat(context, color: AppColor.bText, fontWeight: FontWeight.bold),
                     unselectedLabelStyle: tMontserrat(
                       context,
                       color: AppColor.bsText,
@@ -98,10 +89,7 @@ class _HomePageState extends State<HomePage> {
                         // shrinkWrap: true,
                         // physics: NeverScrollableScrollPhysics(),
                         itemCount: homeCtrl.leaguesList.length,
-                        padding: EdgeInsets.symmetric(
-                          vertical: context.hp(2),
-                          horizontal: context.wp(3),
-                        ),
+                        padding: EdgeInsets.symmetric(vertical: context.hp(2), horizontal: context.wp(3)),
                         itemBuilder: (context, index) {
                           final data = homeCtrl.leaguesList[index];
                           return Obx(
@@ -126,17 +114,13 @@ class _HomePageState extends State<HomePage> {
                               ),
                               minTileHeight: context.hp(6),
                               childrenPadding: EdgeInsets.zero,
-                              tilePadding: EdgeInsets.only(
-                                right: context.wp(1.5),
-                                left: context.wp(3),
-                              ),
+                              tilePadding: EdgeInsets.only(right: context.wp(1.5), left: context.wp(3)),
                               showTrailingIcon: false,
                               title: Row(
                                 children: [
                                   showFlagImage(
                                     context: context,
-                                    url:
-                                        "https://images.fotmob.com/image_resources/logo/leaguelogo/dark/${data.primaryId}.png",
+                                    url: "https://images.fotmob.com/image_resources/logo/leaguelogo/dark/${data.primaryId}.png",
                                   ),
                                   SizedBox(width: context.wp(2)),
 
@@ -144,11 +128,7 @@ class _HomePageState extends State<HomePage> {
                                     child: Text(
                                       "${data.name}",
                                       overflow: TextOverflow.ellipsis,
-                                      style: tInter(
-                                        context,
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: context.sp(16),
-                                      ),
+                                      style: tInter(context, fontWeight: FontWeight.w600, fontSize: context.sp(16)),
                                     ),
                                   ),
                                   SizedBox(width: context.wp(2)),
@@ -156,25 +136,16 @@ class _HomePageState extends State<HomePage> {
                                     width: context.wp(7),
                                     height: context.hp(3.5),
                                     alignment: Alignment.center,
-                                    decoration: BoxDecoration(
-                                      color: AppColor.sCard,
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
+                                    decoration: BoxDecoration(color: AppColor.sCard, borderRadius: BorderRadius.circular(6)),
                                     child: Text(
                                       "${data.matches?.length}",
-                                      style: tInter(
-                                        context,
-                                        color: AppColor.bText,
-                                        fontWeight: FontWeight.bold,
-                                        height: 1,
-                                      ),
+                                      style: tInter(context, color: AppColor.bText, fontWeight: FontWeight.bold, height: 1),
                                     ),
                                   ),
                                   SizedBox(width: context.wp(2)),
                                   AnimatedSwitcher(
                                     duration: const Duration(milliseconds: 200),
-                                    transitionBuilder: (child, animation) =>
-                                        ScaleTransition(scale: animation, child: child),
+                                    transitionBuilder: (child, animation) => ScaleTransition(scale: animation, child: child),
                                     child: Icon(
                                       homeCtrl.isExpanded.value && homeCtrl.eIndex.value == index
                                           ? Icons.keyboard_arrow_up
@@ -204,9 +175,7 @@ class _HomePageState extends State<HomePage> {
                                               Navigation.pushNamed(Routes.matchDetails);
                                             },
                                             child: Padding(
-                                              padding: EdgeInsets.symmetric(
-                                                vertical: context.hp(1.5),
-                                              ),
+                                              padding: EdgeInsets.symmetric(vertical: context.hp(1.5)),
                                               child: Row(
                                                 children: [
                                                   Expanded(
@@ -218,10 +187,7 @@ class _HomePageState extends State<HomePage> {
                                                             "${matchData?.home?.name}",
                                                             textAlign: TextAlign.end,
                                                             overflow: TextOverflow.ellipsis,
-                                                            style: tInter(
-                                                              context,
-                                                              fontWeight: FontWeight.w600,
-                                                            ),
+                                                            style: tInter(context, fontWeight: FontWeight.w600),
                                                           ),
                                                         ),
                                                         SizedBox(width: context.wp(2)),
@@ -239,11 +205,7 @@ class _HomePageState extends State<HomePage> {
                                                     alignment: Alignment.center,
                                                     child: Text(
                                                       "${matchData?.home?.score ?? 0}  -  ${matchData?.away?.score ?? 0}",
-                                                      style: tInter(
-                                                        context,
-                                                        fontWeight: FontWeight.bold,
-                                                        fontSize: 18,
-                                                      ),
+                                                      style: tInter(context, fontWeight: FontWeight.bold, fontSize: 18),
                                                     ),
                                                   ),
 
@@ -262,10 +224,7 @@ class _HomePageState extends State<HomePage> {
                                                             "${matchData?.away?.name}",
                                                             textAlign: TextAlign.start,
                                                             overflow: TextOverflow.ellipsis,
-                                                            style: tInter(
-                                                              context,
-                                                              fontWeight: FontWeight.w600,
-                                                            ),
+                                                            style: tInter(context, fontWeight: FontWeight.w600),
                                                           ),
                                                         ),
                                                       ],

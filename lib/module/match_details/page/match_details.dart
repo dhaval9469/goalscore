@@ -1,6 +1,3 @@
-import 'dart:math' as math;
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:goalscore/module/match_details/ctrl/md_ctrl.dart';
@@ -25,20 +22,33 @@ class _MatchDetailsState extends State<MatchDetails> {
   final mdCtrl = Get.find<MdCtrl>();
 
   double _percent = 1.0;
-
   late double _expandedHeight;
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    Future.delayed(const Duration(seconds: 3), () {
+      if (_scrollController.hasClients) {
+        final collapsedHeight = kToolbarHeight + kTextTabBarHeight;
+        final maxScroll = _expandedHeight - collapsedHeight;
+        _scrollController.animateTo(maxScroll, duration: const Duration(milliseconds: 1200), curve: Curves.easeInOutCubic);
+      }
+    });
   }
 
   void _onScroll() {
     if (!mounted) return;
-    final max = _expandedHeight - context.hp(6);
-    final p   = (1.0 - _scrollController.offset / max).clamp(0.0, 1.0);
-    if ((p - _percent).abs() > 0.004) setState(() => _percent = p);
+
+    final collapsedHeight = kToolbarHeight + kTextTabBarHeight;
+
+    final maxScroll = _expandedHeight - collapsedHeight;
+
+    final p = (1.0 - (_scrollController.offset / maxScroll)).clamp(0.0, 1.0);
+
+    if ((_percent - p).abs() > 0.004) {
+      setState(() => _percent = p);
+    }
   }
 
   @override
@@ -51,17 +61,11 @@ class _MatchDetailsState extends State<MatchDetails> {
 
   @override
   Widget build(BuildContext context) {
-    final int maxGoals = math.max(
-      mdCtrl.homeTeamGoals.length,
-      mdCtrl.awayTeamGoals.length,
-    );
-
-    _expandedHeight = context.hp(24) + (maxGoals * context.sp(18).toDouble());
+    _expandedHeight = context.hp(33);
 
     return DefaultTabController(
       length: 5,
       child: Scaffold(
-        appBar: AppBar(toolbarHeight: 0, backgroundColor: AppColor.header),
         backgroundColor: AppColor.bg,
         body: NestedScrollView(
           controller: _scrollController,
@@ -69,23 +73,25 @@ class _MatchDetailsState extends State<MatchDetails> {
             return [
               SliverAppBar(
                 pinned: true,
-                toolbarHeight: context.hp(6),
-                collapsedHeight: context.hp(6),
+                toolbarHeight: context.hp(7),
+                automaticallyImplyLeading: false,
+                leadingWidth: 56,
                 expandedHeight: _expandedHeight,
                 backgroundColor: AppColor.header,
-                elevation: 0,
-                leading: IconButton(
-                  icon: const Icon(Icons.arrow_back, color: Colors.white),
-                  onPressed: () => Get.back(),
+                leading: GestureDetector(
+                  onTap: () {
+                    Get.back();
+                  },
+                  child: Icon(Icons.arrow_back, color: Colors.white),
                 ),
                 flexibleSpace: _HeaderFlexible(
                   percent: _percent,
                   expandedHeight: _expandedHeight,
                   mdCtrl: mdCtrl,
+                  scrollController: _scrollController,
                 ),
                 bottom: const TabBar(
                   isScrollable: true,
-                  tabAlignment: TabAlignment.start,
                   indicatorColor: Colors.white,
                   tabs: [
                     Tab(text: "Highlights"),
@@ -98,260 +104,471 @@ class _MatchDetailsState extends State<MatchDetails> {
               ),
             ];
           },
-          body: const TabBarView(
-            children: [
-              Commentary(),
-              Lineup(),
-              Stats(),
-              PlayerRanking(),
-              H2h(),
-            ],
-          ),
+          body: const TabBarView(children: [Commentary(), Lineup(), Stats(), PlayerRanking(), H2h()]),
         ),
       ),
     );
   }
 }
 
-// ---------------------------------------------------------------------------
-// _HeaderFlexible  — receives percent directly, no LayoutBuilder needed
-// ---------------------------------------------------------------------------
-
 class _HeaderFlexible extends StatelessWidget {
-  final double percent;        // 1 = expanded · 0 = collapsed
+  final double percent;
   final double expandedHeight;
   final MdCtrl mdCtrl;
+  final ScrollController scrollController;
 
   const _HeaderFlexible({
     required this.percent,
     required this.expandedHeight,
     required this.mdCtrl,
+    required this.scrollController,
   });
+
+  double lerp(double a, double b, double t) => a + (b - a) * t;
+
+  double _opacityFromScroll({required double start, required double end}) {
+    final offset = scrollController.hasClients ? scrollController.offset : 0.0;
+    if (offset <= start) return 1.0;
+    if (offset >= end) return 0.0;
+    return 1.0 - ((offset - start) / (end - start));
+  }
 
   @override
   Widget build(BuildContext context) {
-    final double dashScale = lerpDouble(0.6, 1.0, percent)!;
-    final double ftScale   = lerpDouble(1.0, 0.6, percent)!;
-    final double dashOpacity = percent;
-    final double ftOpacity   = 1.0 - percent;
+    final hasHomeGoal = mdCtrl.homeTeamGoals.isNotEmpty;
+    final hasAwayGoal = mdCtrl.awayTeamGoals.isNotEmpty;
+    final hasAnyGoal = hasHomeGoal || hasAwayGoal;
 
-    final double nameOpacity = percent;
-    final double goalOpacity = (percent / 0.6).clamp(0.0, 1.0);
-    final double ftLabelOpacity = percent;
+    final goalOpacity = _opacityFromScroll(start: 0, end: 70);
+    final nameOpacity = _opacityFromScroll(start: 0, end: 100);
+    final centerSpacing = lerp(45, 15, percent);
+    final offset = scrollController.hasClients ? scrollController.offset : 0.0;
+    final swapOpacity = ((offset - 100) / 40).clamp(0.0, 1.0);
+
+    double logoRadius = lerp(22, 22, percent);
+    logoRadius = logoRadius.clamp(22, 22);
 
     return Align(
       alignment: Alignment.bottomCenter,
       child: Padding(
-        padding: EdgeInsets.only(
-          top: context.hp(0.3),
-          right: context.wp(4),
-          left: context.wp(4),
-          bottom: context.hp(6),
-        ),
-        child: SingleChildScrollView(
-          physics: const NeverScrollableScrollPhysics(),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
+        padding: EdgeInsets.only(right: context.wp(3), left: context.wp(3)),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
 
-              // ── Teams + Score row ─────────────────────────────────────────
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-
-                  // HOME
-                  SizedBox(
-                    width: context.wp(30.5),
-                    child: Column(
-                      children: [
-                        // Logo — scale 0.75→1.0, slide in from right
-                        Transform.scale(
-                          scale: lerpDouble(0.75, 1.0, percent)!,
-                          child: Transform.translate(
-                            offset: Offset(
-                              lerpDouble(context.wp(15), 0, percent)!,
-                              0,
-                            ),
-                            child: _teamLogo(context),
-                          ),
-                        ),
-                        SizedBox(height: context.hp(0.6)),
-                        // Name
-                        Opacity(
-                          opacity: nameOpacity,
-                          child: Text(
-                            "Rajasthan United Fc",
-                            textAlign: TextAlign.center,
-                            overflow: TextOverflow.ellipsis,
-                            style: tInter(
-                              context,
-                              color: AppColor.bText,
-                              fontSize: context.sp(14),
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
+              children: [
+                Expanded(
+                  child: Container(
+                    color: Colors.red,
+                    child: Transform.translate(
+                      offset: Offset(MediaQuery.of(context).size.width * 0.12 * (1 - percent), -expandedHeight * 0),
+                      child: Transform.scale(
+                        scale: lerp(0.72, 1.0, percent),
+                        alignment: Alignment.topRight,
+                        child: CircleAvatar(radius: logoRadius, backgroundColor: AppColor.bg),
+                      ),
                     ),
                   ),
+                ),
 
-                  // SCORE + separator
-                  SizedBox(
-                    width: context.wp(20),
-                    child: Column(
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                SizedBox(width: centerSpacing),
+
+                Container(
+                  color: Colors.red,
+                  width: context.wp(20),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        "1",
+                        style: tInter(
+                          context,
+                          color: AppColor.bText,
+                          fontSize: lerp(28, 35, percent),
+                          fontWeight: FontWeight.bold,
+                        ),
+                        strutStyle: const StrutStyle(
+                          forceStrutHeight: true,
+                        ),
+                      ),
+                      SizedBox(
+                        width: context.wp(10),
+                        child: Stack(
+                          alignment: Alignment.bottomCenter,
                           children: [
-                            Text(
-                              "${1}",
-                              style: tInter(
-                                context,
-                                color: AppColor.bText,
-                                fontWeight: FontWeight.bold,
-                                fontSize: context.sp(25),
+                            /// DASH → fade out + zoom out
+                            Opacity(
+                              opacity: 1 - swapOpacity,
+                              child: Transform.scale(
+                                scale: lerp(1.0, 0.4, swapOpacity),
+                                child: Text(
+                                  "-",
+                                  style: tInter(
+                                    context,
+                                    color: AppColor.bText,
+                                    fontSize: lerp(24, 32, percent),
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  strutStyle: const StrutStyle(
+                                    forceStrutHeight: true,
+                                  ),
+                                ),
                               ),
                             ),
 
-                            // ── Animated separator ───────────────────────────
-                            SizedBox(
-                              width: context.wp(8),
-                              height: context.sp(34),
-                              child: Stack(
-                                alignment: Alignment.center,
-                                children: [
-                                  // " - "  zoom out + fade on collapse
-                                  Opacity(
-                                    opacity: dashOpacity,
-                                    child: Transform.scale(
-                                      scale: dashScale,
-                                      child: Text(
-                                        " - ",
-                                        style: tInter(
-                                          context,
-                                          color: AppColor.bText,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: context.sp(25),
-                                        ),
-                                      ),
-                                    ),
+                            /// FULL TIME → fade in + zoom in
+                            Opacity(
+                              opacity: swapOpacity,
+                              child: Transform.scale(
+                                scale: lerp(0.5, 1.0, swapOpacity),
+                                child: Text(
+                                  "Full Time",
+                                  textAlign: TextAlign.center,
+                                  style: tInter(
+                                    context,
+                                    color: AppColor.bText,
+                                    fontSize: lerp(10, 12, swapOpacity),
+                                    fontWeight: FontWeight.w600,
+                                    height: 1,
                                   ),
-                                  // "FT"  zoom in + fade on collapse
-                                  Opacity(
-                                    opacity: ftOpacity,
-                                    child: Transform.scale(
-                                      scale: ftScale,
-                                      child: Text(
-                                        "FT", // "FT" / "HT" / "75'"
-                                        style: tInter(
-                                          context,
-                                          color: AppColor.bText,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: context.sp(13),
-                                        ),
-                                      ),
-                                    ),
+                                  strutStyle: const StrutStyle(
+                                    forceStrutHeight: true,
                                   ),
-                                ],
-                              ),
-                            ),
-
-                            Text(
-                              "1",
-                              style: tInter(
-                                context,
-                                color: AppColor.bText,
-                                fontWeight: FontWeight.bold,
-                                fontSize: context.sp(25),
+                                ),
                               ),
                             ),
                           ],
                         ),
+                      ),
+                      Text(
+                        "1",
+                        style: tInter(
+                          context,
+                          color: AppColor.bText,
+                          fontSize: lerp(28, 35, percent),
+                          fontWeight: FontWeight.bold,
+                        ),
+                        strutStyle: const StrutStyle(
+                          forceStrutHeight: true,
+                        ),
 
-                        SizedBox(height: context.hp(0.6)),
+                      ),
+                    ],
+                  ),
+                ),
 
-                        // "Full Time" label
+                SizedBox(width: centerSpacing),
+
+                Expanded(
+                  child: Container(
+                    color: Colors.red,
+                    child: Transform.translate(
+                      offset: Offset(-MediaQuery.of(context).size.width * 0.12 * (1 - percent), -expandedHeight * 0),
+                      child: Transform.scale(
+                        scale: lerp(0.72, 1.0, percent),
+                        alignment: Alignment.topLeft,
+                        child: CircleAvatar(radius: logoRadius, backgroundColor: AppColor.bg),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Container(
+                    color: Colors.green,
+                    child: Opacity(
+                      opacity: nameOpacity,
+                      child: Transform.translate(
+                        offset: Offset(MediaQuery.of(context).size.width * 0.12 * (1 - percent), -expandedHeight * 0.012),
+                        child: Text(
+                          "Rajasthan United FC",
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: tInter(
+                            context,
+                            color: AppColor.bText,
+                            fontSize: lerp(0, 12, percent),
+                            fontWeight: FontWeight.w600,
+                            height: 1.2,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+                SizedBox(width: centerSpacing),
+
+                /// CENTER SCORE
+                Container(
+                  color: Colors.green,
+                  width: context.wp(20),
+                  alignment: Alignment.center,
+                  child: Opacity(
+                    opacity: nameOpacity,
+                    child: Transform.translate(
+                      offset: Offset(0, lerp(-10, 0, nameOpacity)),
+                      child: Text(
+                        "Full Time",
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        style: tInter(
+                          context,
+                          color: AppColor.bText,
+                          fontSize: lerp(0, 12, percent),
+                          fontWeight: FontWeight.w600,
+                          height: 1.2,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+                SizedBox(width: centerSpacing),
+
+                /// AWAY
+                Expanded(
+                  child: Container(
+                    color: Colors.green,
+                    child: Opacity(
+                      opacity: nameOpacity,
+                      child: Transform.translate(
+                        offset: Offset(-MediaQuery.of(context).size.width * 0.12 * (1 - percent), -expandedHeight * 0.01),
+                        child: Text(
+                          "Real Kashmir FC",
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: tInter(
+                            context,
+                            color: AppColor.bText,
+                            fontSize: lerp(0, 12, percent),
+                            fontWeight: FontWeight.w600,
+                            height: 1.2,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            /*      Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                /// HOME
+                Expanded(
+                  child: Container(
+                    color: Colors.red,
+                    child: Column(
+                      children: [
+                        // Home logo (top-right)
+                        Transform.translate(
+                          offset: Offset(MediaQuery.of(context).size.width * 0.12 * (1 - percent), -expandedHeight * 0),
+                          child: Transform.scale(
+                            scale: lerp(0.72, 1.0, percent),
+                            alignment: Alignment.topRight,
+                            child: CircleAvatar(radius: logoRadius, backgroundColor: AppColor.bg),
+                          ),
+                        ),
+
+                        SizedBox(height: lerp(0, 5, percent)),
+
                         Opacity(
-                          opacity: ftLabelOpacity,
-                          child: Text(
-                            'Full Time', // "Full Time" / "Half Time" / live min
-                            textAlign: TextAlign.center,
-                            style: tInter(
-                              context,
-                              color: AppColor.bText,
-                              fontSize: context.sp(13),
+                          opacity: nameOpacity,
+                          child: Transform.translate(
+                            offset: Offset(MediaQuery.of(context).size.width * 0.12 * (1 - percent), -expandedHeight * 0.012),
+                            child: Text(
+                              "Rajasthan United FC",
+                              textAlign: TextAlign.center,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: tInter(
+                                context,
+                                color: AppColor.bText,
+                                fontSize: lerp(0, 12, percent),
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                         ),
                       ],
                     ),
                   ),
+                ),
 
-                  // AWAY
-                  SizedBox(
-                    width: context.wp(30.5),
-                    child: Column(
-                      children: [
-                        Transform.scale(
-                          scale: lerpDouble(0.75, 1.0, percent)!,
-                          child: Transform.translate(
-                            offset: Offset(
-                              lerpDouble(-context.wp(15), 0, percent)!,
-                              0,
-                            ),
-                            child: _teamLogo(context),
-                          ),
-                        ),
-                        SizedBox(height: context.hp(0.6)),
-                        Opacity(
-                          opacity: nameOpacity,
-                          child: Text(
-                            "Real kashmir FC",
-                            textAlign: TextAlign.center,
-                            overflow: TextOverflow.ellipsis,
+                SizedBox(width: centerSpacing),
+
+                /// CENTER SCORE
+                Container(
+                  color: Colors.red,
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            "1",
                             style: tInter(
                               context,
                               color: AppColor.bText,
-                              fontSize: context.sp(14),
+                              fontSize: lerp(28, 35, percent),
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          SizedBox(
+                            width: context.wp(10),
+                            height: 30,
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                /// DASH → fade out + zoom out
+                                Opacity(
+                                  opacity: 1 - swapOpacity,
+                                  child: Transform.scale(
+                                    scale: lerp(1.0, 0.4, swapOpacity),
+                                    child: Text(
+                                      "-",
+                                      style: tInter(
+                                        context,
+                                        color: AppColor.bText,
+                                        fontSize: lerp(24, 32, percent),
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+
+                                /// FULL TIME → fade in + zoom in
+                                Opacity(
+                                  opacity: swapOpacity,
+                                  child: Transform.scale(
+                                    scale: lerp(0.5, 1.0, swapOpacity),
+                                    child: Text(
+                                      "Full Time",
+                                      textAlign: TextAlign.center,
+                                      style: tInter(
+                                        context,
+                                        color: AppColor.bText,
+                                        fontSize: lerp(10, 12, swapOpacity),
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          Text(
+                            "1",
+                            style: tInter(
+                              context,
+                              color: AppColor.bText,
+                              fontSize: lerp(28, 35, percent),
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Opacity(
+                        opacity: nameOpacity,
+                        child: Transform.translate(
+                          offset: Offset(0, lerp(-10, 0, nameOpacity)),
+                          child: Text(
+                            "Full Time",
+                            style: tInter(
+                              context,
+                              color: AppColor.bText,
+                              fontSize: lerp(0, 12, percent),
                               fontWeight: FontWeight.w600,
                             ),
                           ),
                         ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                SizedBox(width: centerSpacing),
+
+                /// AWAY
+                Expanded(
+                  child: Container(
+                    color: Colors.red,
+                    child: Column(
+                      children: [
+                        // Away logo (top-left)
+                        Transform.translate(
+                          offset: Offset(-MediaQuery.of(context).size.width * 0.12 * (1 - percent), -expandedHeight * 0),
+                          child: Transform.scale(
+                            scale: lerp(0.72, 1.0, percent),
+                            alignment: Alignment.topLeft,
+                            child: CircleAvatar(radius: logoRadius, backgroundColor: AppColor.bg),
+                          ),
+                        ),
+
+                        SizedBox(height: lerp(0, 5, percent)),
+
+                        Opacity(
+                          opacity: nameOpacity,
+                          child: Transform.translate(
+                            offset: Offset(-MediaQuery.of(context).size.width * 0.12 * (1 - percent), -expandedHeight * 0.01),
+                            child: Text(
+                              "Real Kashmir FC",
+                              textAlign: TextAlign.center,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: tInter(
+                                context,
+                                color: AppColor.bText,
+                                fontSize: lerp(0, 12, percent),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
+            ),*/
+            SizedBox(height: lerp(45, 10, percent)),
 
-              SizedBox(height: context.hp(1)),
-
-              // ── Goal lists — fade out early ───────────────────────────────
+            if (hasAnyGoal)
               Opacity(
                 opacity: goalOpacity,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: _buildGoalList(
-                        context,
-                        mdCtrl.homeTeamGoals,
-                        TextAlign.right,
+                child: Transform.translate(
+                  offset: Offset(0, lerp(-10, 0, goalOpacity)),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: hasHomeGoal
+                            ? _buildGoalList(context, mdCtrl.homeTeamGoals, TextAlign.right)
+                            : const SizedBox.shrink(),
                       ),
-                    ),
-                    SizedBox(width: context.wp(10)),
-                    Expanded(
-                      child: _buildGoalList(
-                        context,
-                        mdCtrl.awayTeamGoals,
-                        TextAlign.left,
+                      if (hasHomeGoal && hasAwayGoal) SizedBox(width: context.wp(10)),
+                      Expanded(
+                        child: hasAwayGoal
+                            ? _buildGoalList(context, mdCtrl.awayTeamGoals, TextAlign.left)
+                            : const SizedBox.shrink(),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ],
-          ),
+            SizedBox(height: lerp(0, 50, percent)),
+          ],
         ),
       ),
     );
@@ -359,31 +576,24 @@ class _HeaderFlexible extends StatelessWidget {
 
   Widget _teamLogo(BuildContext context) {
     return CircleAvatar(
-      radius: context.hp(2.8),
+      radius: 22,
       backgroundColor: AppColor.bg,
+      child: Icon(Icons.shield, color: Colors.white, size: 20),
     );
   }
 
-  Widget _buildGoalList(
-      BuildContext context,
-      List goals,
-      TextAlign align,
-      ) {
+  Widget _buildGoalList(BuildContext context, List goals, TextAlign align) {
     return ListView.builder(
       shrinkWrap: true,
       padding: EdgeInsets.zero,
       physics: const NeverScrollableScrollPhysics(),
-      itemCount: goals.length,
+      itemCount: goals.length > 2 ? 2 : goals.length,
       itemBuilder: (context, index) {
         final goal = goals[index];
         return Text(
-          "${goal['lastName']} ${goal['timeStr']}'",
+          "${goal['lastName']} (${goal['timeStr']}')",
           textAlign: align,
-          style: stInter(
-            context,
-            fontSize: context.sp(12),
-            color: AppColor.bsText,
-          ),
+          style: stInter(context, fontSize: lerp(0, 11, percent), color: AppColor.bsText),
         );
       },
     );
