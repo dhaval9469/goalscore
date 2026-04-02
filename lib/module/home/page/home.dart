@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:goalscore/module/home/ctrl/home_ctrl.dart';
@@ -18,8 +20,47 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  late ScrollController _scrollController;
   final MdCtrl mdCtrl = Get.put(MdCtrl());
   final homeCtrl = Get.find<HomeCtrl>();
+  bool _isTitleVisible = true;
+  Timer? _autoScrollTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController();
+    _scrollController.addListener(_onScroll);
+
+  }
+
+  void _onScroll() {
+    final offset = _scrollController.offset;
+
+    // Hide title when scrolled past 50px
+    final shouldShow = offset < 40;
+
+    if (shouldShow != _isTitleVisible) {
+      setState(() => _isTitleVisible = shouldShow);
+    }
+
+    _autoScrollTimer?.cancel();
+    _autoScrollTimer = Timer(const Duration(seconds: 3), _scrollBackToTop);
+  }
+
+  void _scrollBackToTop() {
+    if (_scrollController.offset > 0) {
+      _scrollController.animateTo(0, duration: const Duration(milliseconds: 500), curve: Curves.easeInOut);
+    }
+  }
+
+  @override
+  void dispose() {
+    _autoScrollTimer?.cancel();
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,14 +70,30 @@ class _HomePageState extends State<HomePage> {
       child: Scaffold(
         backgroundColor: AppColor.bg,
         body: NestedScrollView(
+          controller: _scrollController,
           headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
             return <Widget>[
               SliverAppBar(
-                toolbarHeight: context.hp(5),
                 backgroundColor: AppColor.header,
-                title: Text(
-                  "Matches",
-                  style: tInter(context, fontWeight: FontWeight.bold, color: AppColor.bText, fontSize: context.sp(20)),
+                toolbarHeight: context.hp(5),
+                title: AnimatedSlide(
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeInOut,
+                  offset: _isTitleVisible ? Offset.zero : const Offset(0, -1),
+                  child: AnimatedOpacity(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                    opacity: _isTitleVisible ? 1.0 : 0.0,
+                    child: Text(
+                      "Matches",
+                      style: tInter(
+                        context,
+                        fontWeight: FontWeight.bold,
+                        color: AppColor.bText,
+                        fontSize: context.sp(20),
+                      ),
+                    ),
+                  ),
                 ),
                 floating: true,
                 snap: true,

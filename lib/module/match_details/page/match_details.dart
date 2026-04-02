@@ -37,6 +37,12 @@ class _MatchDetailsState extends State<MatchDetails> {
     });
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _expandedHeight = context.hp(33);
+  }
+
   void _onScroll() {
     if (!mounted) return;
 
@@ -61,8 +67,6 @@ class _MatchDetailsState extends State<MatchDetails> {
 
   @override
   Widget build(BuildContext context) {
-    _expandedHeight = context.hp(33);
-
     return DefaultTabController(
       length: 5,
       child: Scaffold(
@@ -73,9 +77,8 @@ class _MatchDetailsState extends State<MatchDetails> {
             return [
               SliverAppBar(
                 pinned: true,
-                toolbarHeight: context.hp(7),
+                toolbarHeight: context.hp(5.5),
                 automaticallyImplyLeading: false,
-                leadingWidth: 56,
                 expandedHeight: _expandedHeight,
                 backgroundColor: AppColor.header,
                 leading: GestureDetector(
@@ -141,164 +144,141 @@ class _HeaderFlexible extends StatelessWidget {
 
     final goalOpacity = _opacityFromScroll(start: 0, end: 70);
     final nameOpacity = _opacityFromScroll(start: 0, end: 100);
-    final centerSpacing = lerp(45, 15, percent);
-    final offset = scrollController.hasClients ? scrollController.offset : 0.0;
-    final swapOpacity = ((offset - 100) / 40).clamp(0.0, 1.0);
+    final centerSpacing = lerp(45, 20, percent);
 
     double logoRadius = lerp(22, 22, percent);
     logoRadius = logoRadius.clamp(22, 22);
 
+    final dashOpacity = _rangePercent(percent, 0.10, 0.20);
+
+    final fullTimeOpacity = 1.0 - dashOpacity;
+    final widthPercent = 1.0 - _rangePercent(percent, 0.10, 0.50);
+    final centerWidth = lerp(10, 12, widthPercent);
+
     return Align(
       alignment: Alignment.bottomCenter,
       child: Padding(
-        padding: EdgeInsets.only(right: context.wp(3), left: context.wp(3)),
+        padding: EdgeInsets.only(right: context.wp(2), left: context.wp(2)),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Expanded(
-                  child: Container(
-                    color: Colors.red,
-                    child: Transform.translate(
-                      offset: Offset(MediaQuery.of(context).size.width * 0.12 * (1 - percent), -expandedHeight * 0),
-                      child: Transform.scale(
-                        scale: lerp(0.72, 1.0, percent),
-                        alignment: Alignment.topRight,
-                        child: CircleAvatar(radius: logoRadius, backgroundColor: AppColor.bg),
-                      ),
+                  child: Transform.translate(
+                    offset: Offset(MediaQuery.of(context).size.width * 0.12 * (1 - percent), -expandedHeight * 0),
+                    child: Transform.scale(
+                      scale: lerp(0.72, 1.0, percent),
+                      alignment: Alignment.centerRight,
+                      child: CircleAvatar(radius: logoRadius, backgroundColor: AppColor.bg),
                     ),
                   ),
                 ),
 
                 SizedBox(width: centerSpacing),
 
-                Container(
-                  color: Colors.red,
-                  width: context.wp(20),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        "1",
-                        style: tInter(
-                          context,
-                          color: AppColor.bText,
-                          fontSize: lerp(28, 35, percent),
-                          fontWeight: FontWeight.bold,
-                        ),
-                        strutStyle: const StrutStyle(
-                          forceStrutHeight: true,
-                        ),
-                      ),
-                      SizedBox(
-                        width: context.wp(10),
-                        child: Stack(
-                          alignment: Alignment.bottomCenter,
-                          children: [
-                            /// DASH → fade out + zoom out
-                            Opacity(
-                              opacity: 1 - swapOpacity,
-                              child: Transform.scale(
-                                scale: lerp(1.0, 0.4, swapOpacity),
-                                child: Text(
-                                  "-",
-                                  style: tInter(
-                                    context,
-                                    color: AppColor.bText,
-                                    fontSize: lerp(24, 32, percent),
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                  strutStyle: const StrutStyle(
-                                    forceStrutHeight: true,
-                                  ),
-                                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      "1",
+                      style: tInter(context, color: AppColor.bText, fontSize: lerp(28, 35, percent), fontWeight: FontWeight.bold),
+                    ),
+                    SizedBox(
+                      width: context.wp(centerWidth),
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Opacity(
+                            opacity: dashOpacity,
+                            child: Text(
+                              "-",
+                              textAlign: TextAlign.center,
+                              style: tInter(
+                                context,
+                                color: AppColor.bText,
+                                fontSize: lerp(24, 32, percent),
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
+                          ),
 
-                            /// FULL TIME → fade in + zoom in
-                            Opacity(
-                              opacity: swapOpacity,
-                              child: Transform.scale(
-                                scale: lerp(0.5, 1.0, swapOpacity),
-                                child: Text(
-                                  "Full Time",
-                                  textAlign: TextAlign.center,
-                                  style: tInter(
-                                    context,
-                                    color: AppColor.bText,
-                                    fontSize: lerp(10, 12, swapOpacity),
-                                    fontWeight: FontWeight.w600,
-                                    height: 1,
-                                  ),
-                                  strutStyle: const StrutStyle(
-                                    forceStrutHeight: true,
-                                  ),
-                                ),
+                          Opacity(
+                            opacity: fullTimeOpacity,
+                            child: Transform.scale(
+                              scale: lerp(0.5, 1.0, fullTimeOpacity),
+                              child: Text(
+                                "FT",
+                                textAlign: TextAlign.center,
+                                style: tInter(context, color: AppColor.bText, fontSize: 10, fontWeight: FontWeight.w600),
                               ),
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                      Text(
-                        "1",
-                        style: tInter(
-                          context,
-                          color: AppColor.bText,
-                          fontSize: lerp(28, 35, percent),
-                          fontWeight: FontWeight.bold,
-                        ),
-                        strutStyle: const StrutStyle(
-                          forceStrutHeight: true,
-                        ),
+                    ),
 
+                    /*                SizedBox(
+                      width: context.wp(10),
+                      child: Opacity(
+                        opacity: swapOpacity,
+                        child: Transform.scale(
+                          scale: lerp(0.5, 1.0, swapOpacity),
+                          child: Text(
+                            "Full Time",
+                            textAlign: TextAlign.center,
+                            style: tInter(
+                              context,
+                              color: AppColor.bText,
+                              fontSize: lerp(10, 10, swapOpacity),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
                       ),
-                    ],
-                  ),
+                    ),*/
+                    Text(
+                      "1",
+                      style: tInter(context, color: AppColor.bText, fontSize: lerp(28, 35, percent), fontWeight: FontWeight.bold),
+                    ),
+                  ],
                 ),
 
                 SizedBox(width: centerSpacing),
 
                 Expanded(
-                  child: Container(
-                    color: Colors.red,
-                    child: Transform.translate(
-                      offset: Offset(-MediaQuery.of(context).size.width * 0.12 * (1 - percent), -expandedHeight * 0),
-                      child: Transform.scale(
-                        scale: lerp(0.72, 1.0, percent),
-                        alignment: Alignment.topLeft,
-                        child: CircleAvatar(radius: logoRadius, backgroundColor: AppColor.bg),
-                      ),
+                  child: Transform.translate(
+                    offset: Offset(-MediaQuery.of(context).size.width * 0.12 * (1 - percent), -expandedHeight * 0),
+                    child: Transform.scale(
+                      scale: lerp(0.72, 1.0, percent),
+                      alignment: Alignment.centerLeft, // 👈 changed from topLeft
+                      child: CircleAvatar(radius: logoRadius, backgroundColor: AppColor.bg),
                     ),
                   ),
                 ),
               ],
             ),
-
+            SizedBox(height: lerp(0, 3, percent)),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
-                  child: Container(
-                    color: Colors.green,
-                    child: Opacity(
-                      opacity: nameOpacity,
-                      child: Transform.translate(
-                        offset: Offset(MediaQuery.of(context).size.width * 0.12 * (1 - percent), -expandedHeight * 0.012),
-                        child: Text(
-                          "Rajasthan United FC",
-                          textAlign: TextAlign.center,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: tInter(
-                            context,
-                            color: AppColor.bText,
-                            fontSize: lerp(0, 12, percent),
-                            fontWeight: FontWeight.w600,
-                            height: 1.2,
-                          ),
+                  child: Opacity(
+                    opacity: nameOpacity,
+                    child: Transform.translate(
+                      offset: Offset(MediaQuery.of(context).size.width * 0.12 * (1 - percent), -expandedHeight * 0.012),
+                      child: Text(
+                        "Rajasthan United FC",
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: tInter(
+                          context,
+                          color: AppColor.bText,
+                          fontSize: lerp(0, 12, percent),
+                          fontWeight: FontWeight.w600,
+                          height: 1.2,
                         ),
                       ),
                     ),
@@ -309,7 +289,6 @@ class _HeaderFlexible extends StatelessWidget {
 
                 /// CENTER SCORE
                 Container(
-                  color: Colors.green,
                   width: context.wp(20),
                   alignment: Alignment.center,
                   child: Opacity(
@@ -336,24 +315,21 @@ class _HeaderFlexible extends StatelessWidget {
 
                 /// AWAY
                 Expanded(
-                  child: Container(
-                    color: Colors.green,
-                    child: Opacity(
-                      opacity: nameOpacity,
-                      child: Transform.translate(
-                        offset: Offset(-MediaQuery.of(context).size.width * 0.12 * (1 - percent), -expandedHeight * 0.01),
-                        child: Text(
-                          "Real Kashmir FC",
-                          textAlign: TextAlign.center,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: tInter(
-                            context,
-                            color: AppColor.bText,
-                            fontSize: lerp(0, 12, percent),
-                            fontWeight: FontWeight.w600,
-                            height: 1.2,
-                          ),
+                  child: Opacity(
+                    opacity: nameOpacity,
+                    child: Transform.translate(
+                      offset: Offset(-MediaQuery.of(context).size.width * 0.12 * (1 - percent), -expandedHeight * 0.012),
+                      child: Text(
+                        "Real Kashmir FC",
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: tInter(
+                          context,
+                          color: AppColor.bText,
+                          fontSize: lerp(0, 12, percent),
+                          fontWeight: FontWeight.w600,
+                          height: 1.2,
                         ),
                       ),
                     ),
@@ -542,7 +518,7 @@ class _HeaderFlexible extends StatelessWidget {
                 ),
               ],
             ),*/
-            SizedBox(height: lerp(45, 10, percent)),
+            SizedBox(height: lerp(45, 5, percent)),
 
             if (hasAnyGoal)
               Opacity(
@@ -574,12 +550,8 @@ class _HeaderFlexible extends StatelessWidget {
     );
   }
 
-  Widget _teamLogo(BuildContext context) {
-    return CircleAvatar(
-      radius: 22,
-      backgroundColor: AppColor.bg,
-      child: Icon(Icons.shield, color: Colors.white, size: 20),
-    );
+  double _rangePercent(double value, double start, double end) {
+    return ((value - start) / (end - start)).clamp(0.0, 1.0);
   }
 
   Widget _buildGoalList(BuildContext context, List goals, TextAlign align) {
