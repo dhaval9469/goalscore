@@ -1,19 +1,25 @@
 import 'package:goalscore/helper/network_helper.dart';
-import 'package:goalscore/module/home/model/matches_model.dart';
+import 'package:goalscore/module/home/model/allleagues_model.dart';
+import 'package:goalscore/module/home/model/new_matches_model.dart';
 
 class HomeService {
   NetworkAPICall networkAPICall = NetworkAPICall();
 
-  Future<MatchesModel> matches({String? date}) async {
+  Future<NewMatchesModel> matches({String? date, String? timeZone, String? ccode3}) async {
     try {
-      final response = await networkAPICall.get(
-        "matches?date=$date&timezone=Asia%2FCalcutta&ccode3=IND",
-      );
-      return MatchesModel.fromJson(response);
+      final response = await networkAPICall.get("matches?date=$date&timezone=$timeZone&ccode3=IND&includeNextDayLateNight=true");
+      return NewMatchesModel.fromJson(response);
     } catch (e) {
       rethrow;
     }
   }
 
-  //   https://pub.fotmob.com/prod/pub/odds/mylocation
+  Future<AllLeaguesModel> allLeagues({String? locale, String? ccode3}) async {
+    try {
+      final response = await networkAPICall.get("allLeagues?locale=en&country=IND");
+      return AllLeaguesModel.fromJson(response);
+    } catch (e) {
+      rethrow;
+    }
+  }
 }

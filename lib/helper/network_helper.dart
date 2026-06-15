@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+
 import 'package:goalscore/res/app_config.dart';
 import 'package:http/http.dart' as http;
 
@@ -14,18 +15,13 @@ class NetworkAPICall {
 
   NetworkAPICall._internal();
 
-  Future<dynamic> post(
-    String baseUrl,
-    String url,
-    dynamic body, {
-    Map<String, String>? header,
-  }) async {
+  Future<dynamic> post(String url, dynamic body, {Map<String, String>? header}) async {
     final client = http.Client();
 
     try {
       final String fullURL = "${AppConfig.baseUrl}$url";
       final response = await client.post(Uri.parse(fullURL), body: body, headers: header);
-      if (response.statusCode == 200) {
+      if (response.statusCode == 201) {
         return checkResponse(response);
       }
     } catch (e) {
@@ -35,14 +31,13 @@ class NetworkAPICall {
     }
   }
 
-  Future<dynamic> get(String url, {Map<String, String>? header}) async {
+  Future<dynamic> get(String url, {String? fUrl, Map<String, String>? header}) async {
     final client = http.Client();
     try {
       final String fullURL = "${AppConfig.baseUrl}$url";
-      final response = await client.get(Uri.parse(fullURL),headers: header);
-
+      final response = await client.get(Uri.parse(url == "" ? "$fUrl" : fullURL), headers: header);
       if (response.statusCode == 200) {
-        return checkResponse(response);
+        return checkGetResponse(response);
       }
     } catch (e) {
       client.close();
@@ -51,6 +46,36 @@ class NetworkAPICall {
   }
 
   dynamic checkResponse(http.Response response) {
+    try {
+      switch (response.statusCode) {
+        case 201:
+          try {
+            if (response.body.isEmpty) {
+              throw AppException(message: 'Response body is empty', errorCode: 0);
+            }
+            // final send = AppConfig.decryptAESCryptoJS(json.decode(response.body));
+            // return json.decode(send);
+            return json.decode(response.body);
+          } catch (e) {
+            rethrow;
+          }
+        default:
+          try {
+            if (response.body.isEmpty) {
+              throw AppException(message: 'Response body is empty', errorCode: response.statusCode);
+            }
+            final Map<String, dynamic> data = jsonDecode(response.body);
+            throw AppException(message: "error : ${data['Error']}", errorCode: response.statusCode);
+          } catch (e) {
+            rethrow;
+          }
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  dynamic checkGetResponse(http.Response response) {
     try {
       switch (response.statusCode) {
         case 200:

@@ -1,14 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
 import 'package:goalscore/module/match_details/ctrl/md_ctrl.dart';
+import 'package:goalscore/module/match_details/model/n_match_details_model.dart';
 import 'package:goalscore/module/match_details/page/commentary.dart';
 import 'package:goalscore/module/match_details/page/h2h.dart';
+import 'package:goalscore/module/match_details/page/incident.dart';
 import 'package:goalscore/module/match_details/page/lineup.dart';
-import 'package:goalscore/module/match_details/page/player_ranking.dart';
+import 'package:goalscore/module/match_details/page/overview.dart';
 import 'package:goalscore/module/match_details/page/stats.dart';
+import 'package:goalscore/module/match_details/widget/n_match_details_widgets.dart';
+import 'package:goalscore/res/app_assets.dart';
 import 'package:goalscore/res/app_color.dart';
 import 'package:goalscore/res/textstyle.dart';
+import 'package:goalscore/utils/navigation.dart';
 import 'package:goalscore/utils/responsive.dart';
+import 'package:goalscore/utils/utils.dart';
+import 'package:goalscore/widget/image_loader.dart';
 
 class MatchDetails extends StatefulWidget {
   const MatchDetails({super.key});
@@ -24,7 +32,7 @@ class _MatchDetailsState extends State<MatchDetails> {
   double _percent = 1.0;
   late double _expandedHeight;
 
-  @override
+  /*  @override
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
@@ -40,7 +48,31 @@ class _MatchDetailsState extends State<MatchDetails> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _expandedHeight = context.hp(33);
+    _expandedHeight = context.hp(32);
+  }*/
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+
+    // WidgetsBinding.instance.addPostFrameCallback((_) {
+    //   final expandedHeight = context.hp(32);
+    //   final collapsedHeight = context.hp(5.5);
+    //   final maxScroll = expandedHeight - collapsedHeight;
+    //
+    //   Future.delayed(const Duration(seconds: 3), () {
+    //     if (_scrollController.hasClients) {
+    //       _scrollController.animateTo(maxScroll, duration: const Duration(milliseconds: 1200), curve: Curves.easeInOutCubic);
+    //     }
+    //   });
+    // });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _expandedHeight = context.hp(32);
   }
 
   void _onScroll() {
@@ -68,7 +100,7 @@ class _MatchDetailsState extends State<MatchDetails> {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 5,
+      length: 6,
       child: Scaffold(
         backgroundColor: AppColor.bg,
         body: NestedScrollView(
@@ -81,33 +113,62 @@ class _MatchDetailsState extends State<MatchDetails> {
                 automaticallyImplyLeading: false,
                 expandedHeight: _expandedHeight,
                 backgroundColor: AppColor.header,
-                leading: GestureDetector(
-                  onTap: () {
-                    Get.back();
-                  },
-                  child: Icon(Icons.arrow_back, color: Colors.white),
+                title: Opacity(
+                  opacity: _percent,
+                  child: Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          mdCtrl.league.value,
+                          overflow: TextOverflow.ellipsis,
+                          style: tDmSans(context, fontWeight: FontWeight.bold, fontSize: context.sp(17), color: AppColor.bText),
+                        ),
+                      ),
+                      // Text(
+                      //   " - Round ${mdCtrl.mdEvent.value?.roundInfo?.round}",
+                      //   overflow: TextOverflow.ellipsis,
+                      //   style: stDmSans(context, fontSize: context.sp(12), color: AppColor.bsText),
+                      // ),
+                    ],
+                  ),
                 ),
-                flexibleSpace: _HeaderFlexible(
-                  percent: _percent,
-                  expandedHeight: _expandedHeight,
-                  mdCtrl: mdCtrl,
-                  scrollController: _scrollController,
+                leading: Center(
+                  child: GestureDetector(
+                    onTap: () {
+                      Navigation.pop();
+                    },
+                    child: FaIcon(FontAwesomeIcons.angleLeft, color: AppColor.white),
+                  ),
                 ),
-                bottom: const TabBar(
+                flexibleSpace: Obx(
+                  () => mdCtrl.isMDLoader.value
+                      ? Loader(color: AppColor.white)
+                      : _HeaderFlexible(percent: _percent, expandedHeight: _expandedHeight, scrollController: _scrollController),
+                ),
+                bottom: TabBar(
+                  tabAlignment: TabAlignment.start,
                   isScrollable: true,
-                  indicatorColor: Colors.white,
+                  labelStyle: tabLabelTextStyle(context),
+                  unselectedLabelStyle: tabUnLabelTextStyle(context),
+                  indicatorSize: TabBarIndicatorSize.label,
+                  padding: EdgeInsets.zero,
+                  labelPadding: EdgeInsets.symmetric(horizontal: context.wp(2)),
+                  indicatorColor: AppColor.badge,
+                  dividerColor: Colors.transparent,
+                  indicatorWeight: 1,
                   tabs: [
-                    Tab(text: "Highlights"),
-                    Tab(text: "Lineup"),
-                    Tab(text: "Stats"),
-                    Tab(text: "Player Ranking"),
-                    Tab(text: "H2H"),
+                    commonTab(context, title: "Overview"),
+                    commonTab(context, title: "Incident"),
+                    commonTab(context, title: "Lineup"),
+                    commonTab(context, title: "Stats"),
+                    commonTab(context, title: "Commentry"),
+                    commonTab(context, title: "H2H"),
                   ],
                 ),
               ),
             ];
           },
-          body: const TabBarView(children: [Commentary(), Lineup(), Stats(), PlayerRanking(), H2h()]),
+          body: TabBarView(children: [Overview(), IncidentPage(), LineupPage(), StatsPage(), CommentaryPage(), H2hPage()]),
         ),
       ),
     );
@@ -117,15 +178,11 @@ class _MatchDetailsState extends State<MatchDetails> {
 class _HeaderFlexible extends StatelessWidget {
   final double percent;
   final double expandedHeight;
-  final MdCtrl mdCtrl;
   final ScrollController scrollController;
 
-  const _HeaderFlexible({
-    required this.percent,
-    required this.expandedHeight,
-    required this.mdCtrl,
-    required this.scrollController,
-  });
+  _HeaderFlexible({required this.percent, required this.expandedHeight, required this.scrollController});
+
+  final mdCtrl = Get.find<MdCtrl>();
 
   double lerp(double a, double b, double t) => a + (b - a) * t;
 
@@ -138,9 +195,10 @@ class _HeaderFlexible extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasHomeGoal = mdCtrl.homeTeamGoals.isNotEmpty;
-    final hasAwayGoal = mdCtrl.awayTeamGoals.isNotEmpty;
-    final hasAnyGoal = hasHomeGoal || hasAwayGoal;
+    final data = mdCtrl.matchHeader.value;
+    final hasHomeGoal = data?.events?.homeTeamGoals?.isNotEmpty;
+    final hasAwayGoal = data?.events?.awayTeamGoals?.isNotEmpty;
+    final hasAnyGoal = (hasHomeGoal ?? false) || (hasAwayGoal ?? false);
 
     final goalOpacity = _opacityFromScroll(start: 0, end: 70);
     final nameOpacity = _opacityFromScroll(start: 0, end: 100);
@@ -154,398 +212,213 @@ class _HeaderFlexible extends StatelessWidget {
     final fullTimeOpacity = 1.0 - dashOpacity;
     final widthPercent = 1.0 - _rangePercent(percent, 0.10, 0.50);
     final centerWidth = lerp(10, 12, widthPercent);
-
     return Align(
       alignment: Alignment.bottomCenter,
-      child: Padding(
-        padding: EdgeInsets.only(right: context.wp(2), left: context.wp(2)),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Expanded(
-                  child: Transform.translate(
-                    offset: Offset(MediaQuery.of(context).size.width * 0.12 * (1 - percent), -expandedHeight * 0),
-                    child: Transform.scale(
-                      scale: lerp(0.72, 1.0, percent),
-                      alignment: Alignment.centerRight,
-                      child: CircleAvatar(radius: logoRadius, backgroundColor: AppColor.bg),
-                    ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Transform.translate(
+                  offset: Offset(MediaQuery.of(context).size.width * 0.12 * (1 - percent), -expandedHeight * 0),
+                  child: Transform.scale(
+                    scale: lerp(0.72, 1.0, percent),
+                    alignment: Alignment.centerRight,
+                    child: showTeamLogo(context: context, isFullUrl: true, url: "${data?.teams?.first.imageUrl}"),
                   ),
                 ),
+              ),
 
-                SizedBox(width: centerSpacing),
+              SizedBox(width: centerSpacing),
 
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      "1",
-                      style: tInter(context, color: AppColor.bText, fontSize: lerp(28, 35, percent), fontWeight: FontWeight.bold),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    "${data?.teams?.first.score}",
+                    style: tInter(
+                      context,
+                      color: (data?.teams?.first.score ?? 0) > (data?.teams?.last.score ?? 0) ? AppColor.badge : AppColor.bText,
+                      fontSize: lerp(28, 35, percent),
+                      fontWeight: FontWeight.bold,
                     ),
-                    SizedBox(
-                      width: context.wp(centerWidth),
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          Opacity(
-                            opacity: dashOpacity,
-                            child: Text(
-                              "-",
-                              textAlign: TextAlign.center,
-                              style: tInter(
-                                context,
-                                color: AppColor.bText,
-                                fontSize: lerp(24, 32, percent),
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-
-                          Opacity(
-                            opacity: fullTimeOpacity,
-                            child: Transform.scale(
-                              scale: lerp(0.5, 1.0, fullTimeOpacity),
-                              child: Text(
-                                "FT",
-                                textAlign: TextAlign.center,
-                                style: tInter(context, color: AppColor.bText, fontSize: 10, fontWeight: FontWeight.w600),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    /*                SizedBox(
-                      width: context.wp(10),
-                      child: Opacity(
-                        opacity: swapOpacity,
-                        child: Transform.scale(
-                          scale: lerp(0.5, 1.0, swapOpacity),
+                  ),
+                  SizedBox(
+                    width: context.wp(centerWidth),
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Opacity(
+                          opacity: dashOpacity,
                           child: Text(
-                            "Full Time",
+                            "-",
                             textAlign: TextAlign.center,
                             style: tInter(
                               context,
                               color: AppColor.bText,
-                              fontSize: lerp(10, 10, swapOpacity),
+                              fontSize: lerp(24, 32, percent),
                               fontWeight: FontWeight.w600,
                             ),
                           ),
                         ),
-                      ),
-                    ),*/
-                    Text(
-                      "1",
-                      style: tInter(context, color: AppColor.bText, fontSize: lerp(28, 35, percent), fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                ),
-
-                SizedBox(width: centerSpacing),
-
-                Expanded(
-                  child: Transform.translate(
-                    offset: Offset(-MediaQuery.of(context).size.width * 0.12 * (1 - percent), -expandedHeight * 0),
-                    child: Transform.scale(
-                      scale: lerp(0.72, 1.0, percent),
-                      alignment: Alignment.centerLeft, // 👈 changed from topLeft
-                      child: CircleAvatar(radius: logoRadius, backgroundColor: AppColor.bg),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: lerp(0, 3, percent)),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Opacity(
-                    opacity: nameOpacity,
-                    child: Transform.translate(
-                      offset: Offset(MediaQuery.of(context).size.width * 0.12 * (1 - percent), -expandedHeight * 0.012),
-                      child: Text(
-                        "Rajasthan United FC",
-                        textAlign: TextAlign.center,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: tInter(
-                          context,
-                          color: AppColor.bText,
-                          fontSize: lerp(0, 12, percent),
-                          fontWeight: FontWeight.w600,
-                          height: 1.2,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-
-                SizedBox(width: centerSpacing),
-
-                /// CENTER SCORE
-                Container(
-                  width: context.wp(20),
-                  alignment: Alignment.center,
-                  child: Opacity(
-                    opacity: nameOpacity,
-                    child: Transform.translate(
-                      offset: Offset(0, lerp(-10, 0, nameOpacity)),
-                      child: Text(
-                        "Full Time",
-                        textAlign: TextAlign.center,
-                        maxLines: 2,
-                        style: tInter(
-                          context,
-                          color: AppColor.bText,
-                          fontSize: lerp(0, 12, percent),
-                          fontWeight: FontWeight.w600,
-                          height: 1.2,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-
-                SizedBox(width: centerSpacing),
-
-                /// AWAY
-                Expanded(
-                  child: Opacity(
-                    opacity: nameOpacity,
-                    child: Transform.translate(
-                      offset: Offset(-MediaQuery.of(context).size.width * 0.12 * (1 - percent), -expandedHeight * 0.012),
-                      child: Text(
-                        "Real Kashmir FC",
-                        textAlign: TextAlign.center,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: tInter(
-                          context,
-                          color: AppColor.bText,
-                          fontSize: lerp(0, 12, percent),
-                          fontWeight: FontWeight.w600,
-                          height: 1.2,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-
-            /*      Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                /// HOME
-                Expanded(
-                  child: Container(
-                    color: Colors.red,
-                    child: Column(
-                      children: [
-                        // Home logo (top-right)
-                        Transform.translate(
-                          offset: Offset(MediaQuery.of(context).size.width * 0.12 * (1 - percent), -expandedHeight * 0),
-                          child: Transform.scale(
-                            scale: lerp(0.72, 1.0, percent),
-                            alignment: Alignment.topRight,
-                            child: CircleAvatar(radius: logoRadius, backgroundColor: AppColor.bg),
-                          ),
-                        ),
-
-                        SizedBox(height: lerp(0, 5, percent)),
 
                         Opacity(
-                          opacity: nameOpacity,
-                          child: Transform.translate(
-                            offset: Offset(MediaQuery.of(context).size.width * 0.12 * (1 - percent), -expandedHeight * 0.012),
+                          opacity: fullTimeOpacity,
+                          child: Transform.scale(
+                            scale: lerp(0.5, 1.0, fullTimeOpacity),
                             child: Text(
-                              "Rajasthan United FC",
+                              getMatchStatusText(status: data?.status),
                               textAlign: TextAlign.center,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: tInter(
-                                context,
-                                color: AppColor.bText,
-                                fontSize: lerp(0, 12, percent),
-                                fontWeight: FontWeight.w600,
-                              ),
+                              style: tInter(context, color: AppColor.bsText, fontSize: 10, fontWeight: FontWeight.w600),
                             ),
                           ),
                         ),
                       ],
                     ),
                   ),
-                ),
 
-                SizedBox(width: centerSpacing),
-
-                /// CENTER SCORE
-                Container(
-                  color: Colors.red,
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          Text(
-                            "1",
-                            style: tInter(
-                              context,
-                              color: AppColor.bText,
-                              fontSize: lerp(28, 35, percent),
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          SizedBox(
-                            width: context.wp(10),
-                            height: 30,
-                            child: Stack(
-                              alignment: Alignment.center,
-                              children: [
-                                /// DASH → fade out + zoom out
-                                Opacity(
-                                  opacity: 1 - swapOpacity,
-                                  child: Transform.scale(
-                                    scale: lerp(1.0, 0.4, swapOpacity),
-                                    child: Text(
-                                      "-",
-                                      style: tInter(
-                                        context,
-                                        color: AppColor.bText,
-                                        fontSize: lerp(24, 32, percent),
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-
-                                /// FULL TIME → fade in + zoom in
-                                Opacity(
-                                  opacity: swapOpacity,
-                                  child: Transform.scale(
-                                    scale: lerp(0.5, 1.0, swapOpacity),
-                                    child: Text(
-                                      "Full Time",
-                                      textAlign: TextAlign.center,
-                                      style: tInter(
-                                        context,
-                                        color: AppColor.bText,
-                                        fontSize: lerp(10, 12, swapOpacity),
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-
-                          Text(
-                            "1",
-                            style: tInter(
-                              context,
-                              color: AppColor.bText,
-                              fontSize: lerp(28, 35, percent),
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                      Opacity(
-                        opacity: nameOpacity,
-                        child: Transform.translate(
-                          offset: Offset(0, lerp(-10, 0, nameOpacity)),
-                          child: Text(
-                            "Full Time",
-                            style: tInter(
-                              context,
-                              color: AppColor.bText,
-                              fontSize: lerp(0, 12, percent),
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                SizedBox(width: centerSpacing),
-
-                /// AWAY
-                Expanded(
-                  child: Container(
-                    color: Colors.red,
-                    child: Column(
-                      children: [
-                        // Away logo (top-left)
-                        Transform.translate(
-                          offset: Offset(-MediaQuery.of(context).size.width * 0.12 * (1 - percent), -expandedHeight * 0),
-                          child: Transform.scale(
-                            scale: lerp(0.72, 1.0, percent),
-                            alignment: Alignment.topLeft,
-                            child: CircleAvatar(radius: logoRadius, backgroundColor: AppColor.bg),
-                          ),
-                        ),
-
-                        SizedBox(height: lerp(0, 5, percent)),
-
-                        Opacity(
-                          opacity: nameOpacity,
-                          child: Transform.translate(
-                            offset: Offset(-MediaQuery.of(context).size.width * 0.12 * (1 - percent), -expandedHeight * 0.01),
-                            child: Text(
-                              "Real Kashmir FC",
-                              textAlign: TextAlign.center,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: tInter(
-                                context,
-                                color: AppColor.bText,
-                                fontSize: lerp(0, 12, percent),
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
+                  Text(
+                    "${data?.teams?.last.score}",
+                    style: tInter(
+                      context,
+                      color: (data?.teams?.last.score ?? 0) > (data?.teams?.first.score ?? 0) ? AppColor.badge : AppColor.bText,
+                      fontSize: lerp(28, 35, percent),
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                ),
-              ],
-            ),*/
-            SizedBox(height: lerp(45, 5, percent)),
+                ],
+              ),
 
-            if (hasAnyGoal)
-              Opacity(
-                opacity: goalOpacity,
+              SizedBox(width: centerSpacing),
+
+              Expanded(
                 child: Transform.translate(
-                  offset: Offset(0, lerp(-10, 0, goalOpacity)),
+                  offset: Offset(-MediaQuery.of(context).size.width * 0.12 * (1 - percent), -expandedHeight * 0),
+                  child: Transform.scale(
+                    scale: lerp(0.72, 1.0, percent),
+                    alignment: Alignment.centerLeft,
+                    child: showTeamLogo(context: context, isFullUrl: true, url: "${data?.teams?.last.imageUrl}"),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: lerp(0, 7, percent)),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Opacity(
+                  opacity: nameOpacity,
+                  child: Transform.translate(
+                    offset: Offset(MediaQuery.of(context).size.width * 0.12 * (1 - percent), -expandedHeight * 0.012),
+                    child: Text(
+                      "${data?.teams?.first.name}",
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: tInter(
+                        context,
+                        color: AppColor.bText,
+                        fontSize: lerp(0, 12, percent),
+                        fontWeight: FontWeight.w600,
+                        height: 1.2,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              SizedBox(width: centerSpacing),
+
+              /// CENTER SCORE
+              Container(
+                width: context.wp(20),
+                alignment: Alignment.center,
+                child: Opacity(
+                  opacity: nameOpacity,
+                  child: Transform.translate(
+                    offset: Offset(0, lerp(-10, 0, nameOpacity)),
+                    child: Text(
+                      getMatchStatusText(status: data?.status),
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      style: tInter(
+                        context,
+                        color: AppColor.bsText,
+                        fontSize: lerp(0, 12, percent),
+                        fontWeight: FontWeight.w600,
+                        height: 1.2,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              SizedBox(width: centerSpacing),
+
+              /// AWAY
+              Expanded(
+                child: Opacity(
+                  opacity: nameOpacity,
+                  child: Transform.translate(
+                    offset: Offset(-MediaQuery.of(context).size.width * 0.12 * (1 - percent), -expandedHeight * 0.012),
+                    child: Text(
+                      "${data?.teams?.last.name}",
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: tInter(
+                        context,
+                        color: AppColor.bText,
+                        fontSize: lerp(0, 12, percent),
+                        fontWeight: FontWeight.w600,
+                        height: 1.2,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: lerp(28, 12, percent)),
+          if (hasAnyGoal)
+            Opacity(
+              opacity: goalOpacity,
+              child: Transform.translate(
+                offset: Offset(0, lerp(-10, 0, goalOpacity)),
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 10),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(
-                        child: hasHomeGoal
-                            ? _buildGoalList(context, mdCtrl.homeTeamGoals, TextAlign.right)
+                        child: hasHomeGoal ?? false
+                            ? _buildGoalList(context, data?.events?.homeTeamGoals, true)
                             : const SizedBox.shrink(),
                       ),
-                      if (hasHomeGoal && hasAwayGoal) SizedBox(width: context.wp(10)),
+                      SizedBox(
+                        width: context.wp(10),
+                        height: context.wp(5),
+                        child: Padding(
+                          padding: EdgeInsets.only(top: context.wp(1)),
+                          child: Image.asset(AppAssets.football, color: AppColor.white, scale: 40),
+                        ),
+                      ),
                       Expanded(
-                        child: hasAwayGoal
-                            ? _buildGoalList(context, mdCtrl.awayTeamGoals, TextAlign.left)
+                        child: hasAwayGoal ?? false
+                            ? _buildGoalList(context, data?.events?.awayTeamGoals, false)
                             : const SizedBox.shrink(),
                       ),
                     ],
                   ),
                 ),
               ),
-            SizedBox(height: lerp(0, 50, percent)),
-          ],
-        ),
+            ),
+          SizedBox(height: lerp(0, 40, percent)),
+        ],
       ),
     );
   }
@@ -554,311 +427,51 @@ class _HeaderFlexible extends StatelessWidget {
     return ((value - start) / (end - start)).clamp(0.0, 1.0);
   }
 
-  Widget _buildGoalList(BuildContext context, List goals, TextAlign align) {
-    return ListView.builder(
-      shrinkWrap: true,
-      padding: EdgeInsets.zero,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: goals.length > 2 ? 2 : goals.length,
-      itemBuilder: (context, index) {
-        final goal = goals[index];
-        return Text(
-          "${goal['lastName']} (${goal['timeStr']}')",
-          textAlign: align,
-          style: stInter(context, fontSize: lerp(0, 11, percent), color: AppColor.bsText),
-        );
-      },
-    );
-  }
-}
-
-/*class MatchDetails extends StatefulWidget {
-  const MatchDetails({super.key});
-
-  @override
-  State<MatchDetails> createState() => _MatchDetailsState();
-}
-
-class _MatchDetailsState extends State<MatchDetails> {
-  final ScrollController _scrollController = ScrollController();
-  final mdCtrl = Get.find<MdCtrl>();
-  Timer? _timer;
-
-  @override
-  void initState() {
-    super.initState();
-
-    _timer = Timer(const Duration(seconds: 3), () {
-      if (_scrollController.hasClients) {
-        final double expandedHeight = MediaQuery.of(context).size.height * .24;
-        final double targetOffset = expandedHeight - kToolbarHeight;
-
-        _scrollController.animateTo(
-          targetOffset,
-          duration: const Duration(milliseconds: 1200),
-          curve: Curves.fastOutSlowIn,
-        );
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    int maxGoals = math.max(mdCtrl.homeTeamGoals.length, mdCtrl.awayTeamGoals.length);
-
-    double baseHeaderHeight = context.hp(24);
-    double rowHeight = context.sp(18);
-    final expandedHeight = baseHeaderHeight + (maxGoals * rowHeight);
-    return DefaultTabController(
-      length: 5,
-      child: Scaffold(
-        appBar: AppBar(toolbarHeight: 0, backgroundColor: AppColor.header),
-        backgroundColor: AppColor.bg,
-        body: NestedScrollView(
-          controller: _scrollController,
-          headerSliverBuilder: (context, innerBoxIsScrolled) {
-            return [
-              SliverAppBar(
-                pinned: true,
-                toolbarHeight: context.hp(6),
-                collapsedHeight: context.hp(6),
-                expandedHeight: expandedHeight,
-                backgroundColor: AppColor.header,
-                elevation: 0,
-                leading: IconButton(
-                  icon: const Icon(Icons.arrow_back, color: Colors.white),
-                  onPressed: () => Get.back(),
-                ),
-                flexibleSpace: LayoutBuilder(
-                  builder: (context, constraints) {
-
-                    double percent = (constraints.maxHeight - kToolbarHeight) / (expandedHeight - kToolbarHeight);
-                    percent = percent.clamp(0.0, 1.0);
-                    double logoScale = lerpDouble(0.75, 1.0, percent)!;
-
-                    return Align(
-                      alignment: Alignment.bottomCenter,
-                      child: Padding(
-                        padding: EdgeInsets.only(
-                          top: context.hp(0.3),
-                          right: context.wp(4),
-                          left: context.wp(4),
-                          bottom: context.hp(6),
-                        ),
-                        child: SingleChildScrollView(
-                          physics: const NeverScrollableScrollPhysics(),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  SizedBox(
-                                    width: context.wp(30.5),
-                                    child: Column(
-                                      children: [
-
-                                        Transform.scale(
-                                          scale: logoScale,
-                                          child: Transform.translate(
-                                            offset: Offset(lerpDouble(context.wp(15), 0, percent)!, 0),
-                                            child: _teamLogo(),
-                                          ),
-                                        ),
-
-                                        SizedBox(height: context.hp(0.6)),
-
-                                        Opacity(
-                                          opacity: percent,
-                                          child: Text(
-                                            'Rajasthan United FC',
-                                            textAlign: TextAlign.center,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: tInter(
-                                              context,
-                                              color: AppColor.bText,
-                                              fontSize: context.sp(14),
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  SizedBox(
-                                    width: context.wp(20),
-                                    child: Column(
-                                      children: [
-
-                                        Row(
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          children: [
-                                            Text(
-                                              "1",
-                                              textAlign: TextAlign.center,
-                                              style: tInter(
-                                                context,
-                                                color: AppColor.bText,
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: context.sp(25),
-                                              ),
-                                            ),
-                                            Text(
-                                              " - ",
-                                              textAlign: TextAlign.center,
-                                              style: tInter(
-                                                context,
-                                                color: AppColor.bText,
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: context.sp(25),
-                                              ),
-                                            ),
-                                            Text(
-                                              "1",
-                                              textAlign: TextAlign.center,
-                                              style: tInter(
-                                                context,
-                                                color: AppColor.bText,
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: context.sp(25),
-                                              ),
-                                            ),
-
-                                          ],
-                                        ),
-
-                                        SizedBox(height: context.hp(0.6)),
-
-                                        Center(
-                                          child: Opacity(
-                                            opacity: percent,
-                                            child: Text(
-                                              "Full Time",
-                                              textAlign: TextAlign.center,
-                                              style: tInter(
-                                                context,
-                                                color: AppColor.bText,
-                                                fontSize: context.sp(13),
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  SizedBox(
-                                    width: context.wp(30.5),
-                                    child: Column(
-                                      children: [
-                                        Transform.scale(
-                                          scale: logoScale,
-                                          child: Transform.translate(
-                                            offset: Offset(lerpDouble(-context.wp(15), 0, percent)!, 0),
-                                            child: _teamLogo(),
-                                          ),
-                                        ),
-
-                                        SizedBox(height: context.hp(0.6)),
-
-                                        Opacity(
-                                          opacity: percent,
-                                          // opacity: (percent - 0.7).clamp(0.0, 0.3) / 0.3,
-                                          child: Text(
-                                            'Real Kashmir FC',
-                                            textAlign: TextAlign.center,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: tInter(
-                                              context,
-                                              color: AppColor.bText,
-                                              fontSize: context.sp(14),
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              SizedBox(height: context.hp(1)),
-                              Opacity(
-                                opacity: percent,
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Expanded(
-                                      child: _buildGoalList(
-                                        mdCtrl.homeTeamGoals,
-                                        TextAlign.right,
-                                      ),
-                                    ),
-                                    SizedBox(width: context.wp(10)),
-                                    Expanded(
-                                      child: _buildGoalList(
-                                        mdCtrl.awayTeamGoals,
-                                        TextAlign.left,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-
-                bottom: const TabBar(
-                  isScrollable: true,
-                  tabAlignment: TabAlignment.start,
-                  indicatorColor: Colors.white,
-                  tabs: [
-                    Tab(text: "Highlights"),
-                    Tab(text: "Lineup"),
-                    Tab(text: "Stats"),
-                    Tab(text: "Player Ranking"),
-                    Tab(text: "H2H"),
-                  ],
-                ),
-              ),
-            ];
-          },
-
-          body: const TabBarView(
-            children: [Commentary(), Lineup(), Stats(), PlayerRanking(), H2h()],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _teamLogo() {
-    return CircleAvatar(radius: context.hp(2.8), backgroundColor: AppColor.bg);
-  }
-
-  Widget _buildGoalList(List goals, TextAlign align) {
+  Widget _buildGoalList(BuildContext context, Map<String, List<GoalEvent>>? scoreDetail, bool isHomeGoal) {
+    final goals =
+        scoreDetail?.entries.expand((entry) => entry.value.map((goal) => MapEntry(entry.key, goal))).take(2).toList() ?? [];
     return ListView.builder(
       shrinkWrap: true,
       padding: EdgeInsets.zero,
       physics: const NeverScrollableScrollPhysics(),
       itemCount: goals.length,
       itemBuilder: (context, index) {
-        final goal = goals[index];
-        return Text(
-          "${goal['lastName']} ${goal['timeStr']}'",
-          textAlign: align,
-          style: stInter(context, fontSize: context.sp(12), color: AppColor.bsText),
-        );
+        final playerKey = goals[index].key; // van Dijk
+        final goal = goals[index].value;
+
+        return isHomeGoal
+            ? Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      playerKey,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.end,
+                      style: stInter(context, fontSize: lerp(0, 11, percent), color: AppColor.bsText),
+                    ),
+                  ),
+                  Text(
+                    "  ${goal.time ?? ''}'",
+                    style: stInter(context, fontSize: lerp(0, 11, percent), color: AppColor.bsText),
+                  ),
+                ],
+              )
+            : Row(
+                children: [
+                  Text(
+                    "${goal.time ?? ''}'  ",
+                    style: stInter(context, fontSize: lerp(0, 11, percent), color: AppColor.bsText),
+                  ),
+                  Expanded(
+                    child: Text(
+                      playerKey,
+                      overflow: TextOverflow.ellipsis,
+                      style: stInter(context, fontSize: lerp(0, 11, percent), color: AppColor.bsText),
+                    ),
+                  ),
+                ],
+              );
       },
     );
   }
-}*/
+}

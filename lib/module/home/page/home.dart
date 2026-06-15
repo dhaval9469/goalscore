@@ -1,8 +1,9 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
 import 'package:goalscore/module/home/ctrl/home_ctrl.dart';
+import 'package:goalscore/module/home/widget/match_calendar_bottomsheet.dart';
+import 'package:goalscore/module/home/widget/matches_widget.dart';
 import 'package:goalscore/module/match_details/ctrl/md_ctrl.dart';
 import 'package:goalscore/res/app_color.dart';
 import 'package:goalscore/res/textstyle.dart';
@@ -20,47 +21,8 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  late ScrollController _scrollController;
   final MdCtrl mdCtrl = Get.put(MdCtrl());
   final homeCtrl = Get.find<HomeCtrl>();
-  bool _isTitleVisible = true;
-  Timer? _autoScrollTimer;
-
-  @override
-  void initState() {
-    super.initState();
-    _scrollController = ScrollController();
-    _scrollController.addListener(_onScroll);
-
-  }
-
-  void _onScroll() {
-    final offset = _scrollController.offset;
-
-    // Hide title when scrolled past 50px
-    final shouldShow = offset < 40;
-
-    if (shouldShow != _isTitleVisible) {
-      setState(() => _isTitleVisible = shouldShow);
-    }
-
-    _autoScrollTimer?.cancel();
-    _autoScrollTimer = Timer(const Duration(seconds: 3), _scrollBackToTop);
-  }
-
-  void _scrollBackToTop() {
-    if (_scrollController.offset > 0) {
-      _scrollController.animateTo(0, duration: const Duration(milliseconds: 500), curve: Curves.easeInOut);
-    }
-  }
-
-  @override
-  void dispose() {
-    _autoScrollTimer?.cancel();
-    _scrollController.removeListener(_onScroll);
-    _scrollController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -70,30 +32,41 @@ class _HomePageState extends State<HomePage> {
       child: Scaffold(
         backgroundColor: AppColor.bg,
         body: NestedScrollView(
-          controller: _scrollController,
+          // controller: _scrollController,
           headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
             return <Widget>[
               SliverAppBar(
                 backgroundColor: AppColor.header,
                 toolbarHeight: context.hp(5),
-                title: AnimatedSlide(
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeInOut,
-                  offset: _isTitleVisible ? Offset.zero : const Offset(0, -1),
-                  child: AnimatedOpacity(
-                    duration: const Duration(milliseconds: 300),
-                    curve: Curves.easeInOut,
-                    opacity: _isTitleVisible ? 1.0 : 0.0,
-                    child: Text(
+                title: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
                       "Matches",
-                      style: tInter(
-                        context,
-                        fontWeight: FontWeight.bold,
-                        color: AppColor.bText,
-                        fontSize: context.sp(20),
-                      ),
+                      style: tInter(context, fontWeight: FontWeight.bold, color: AppColor.bText, fontSize: context.sp(20)),
                     ),
-                  ),
+                    GestureDetector(
+                      onTap: () {
+                        showModalBottomSheet(
+                          context: context,
+                          backgroundColor: Colors.transparent,
+                          builder: (_) => MatchCalendarBottomSheet(
+                            selectedDate: homeCtrl.selectedDate,
+                            onDateSelected: (date) {
+                              homeCtrl.isMatchesLoader.value = true;
+                              final formatted = DateFormat('yyyy-MM-dd').format(date);
+                              homeCtrl.getMatches(date: formatted);
+                              int tabIndex = homeCtrl.dates.indexWhere(
+                                (d) => d.year == date.year && d.month == date.month && d.day == date.day,
+                              );
+                              if (tabIndex != -1) homeCtrl.tabController.animateTo(tabIndex);
+                            },
+                          ),
+                        );
+                      },
+                      child: FaIcon(FontAwesomeIcons.solidCalendarDays, color: AppColor.bText, size: context.sp(23)),
+                    ),
+                  ],
                 ),
                 floating: true,
                 snap: true,
@@ -102,25 +75,23 @@ class _HomePageState extends State<HomePage> {
                 bottom: PreferredSize(
                   preferredSize: Size.fromHeight(context.hp(4.3)),
                   child: TabBar(
+                    tabAlignment: TabAlignment.center,
                     controller: homeCtrl.tabController,
                     isScrollable: true,
-
                     indicatorSize: TabBarIndicatorSize.label,
                     indicatorColor: AppColor.white,
-                    labelStyle: tMontserrat(context, color: AppColor.bText, fontWeight: FontWeight.bold),
-                    unselectedLabelStyle: tMontserrat(
+                    labelStyle: tDmSans(context, color: AppColor.bText, fontWeight: FontWeight.bold),
+                    unselectedLabelStyle: tDmSans(
                       context,
                       color: AppColor.bsText,
                       fontSize: context.sp(14),
                       fontWeight: FontWeight.w600,
                     ),
-
                     labelPadding: EdgeInsets.symmetric(horizontal: context.wp(1.5)),
                     padding: EdgeInsets.zero,
                     onTap: (index) {
                       DateTime selectedDate = homeCtrl.dates[index];
-                      String formattedDate = DateFormat('yyyyMMdd').format(selectedDate);
-
+                      String formattedDate = DateFormat('yyyy-MM-dd').format(selectedDate);
                       homeCtrl.getMatches(date: formattedDate);
                     },
                     tabs: homeCtrl.dates.map((date) {
@@ -143,168 +114,166 @@ class _HomePageState extends State<HomePage> {
                 () => homeCtrl.isMatchesLoader.value
                     ? Center(child: CircularProgressIndicator())
                     : ListView.separated(
-                        // shrinkWrap: true,
-                        // physics: NeverScrollableScrollPhysics(),
-                        itemCount: homeCtrl.leaguesList.length,
+                        shrinkWrap: true,
+                        itemCount: homeCtrl.leaguesMatchList.length,
                         padding: EdgeInsets.symmetric(vertical: context.hp(2), horizontal: context.wp(3)),
                         itemBuilder: (context, index) {
-                          final data = homeCtrl.leaguesList[index];
-                          return Obx(
-                            () => ExpansionTile(
-                              onExpansionChanged: (value) {
-                                homeCtrl.isExpanded.value = value;
-                                homeCtrl.eIndex.value = index;
-                              },
-                              backgroundColor: AppColor.card,
-                              collapsedBackgroundColor: AppColor.card,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                                side: BorderSide(color: AppColor.divider),
-                              ),
-                              collapsedShape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                                side: BorderSide(color: AppColor.divider),
-                              ),
-                              expansionAnimationStyle: const AnimationStyle(
-                                duration: Duration(milliseconds: 1000),
-                                curve: Curves.easeInOutCubic,
-                              ),
-                              minTileHeight: context.hp(6),
-                              childrenPadding: EdgeInsets.zero,
-                              tilePadding: EdgeInsets.only(right: context.wp(1.5), left: context.wp(3)),
-                              showTrailingIcon: false,
-                              title: Row(
-                                children: [
-                                  showFlagImage(
-                                    context: context,
-                                    url: "https://images.fotmob.com/image_resources/logo/leaguelogo/dark/${data.primaryId}.png",
-                                  ),
-                                  SizedBox(width: context.wp(2)),
+                          final matches = homeCtrl.leaguesMatchList[index];
 
-                                  Expanded(
-                                    child: Text(
-                                      "${data.name}",
-                                      overflow: TextOverflow.ellipsis,
-                                      style: tInter(context, fontWeight: FontWeight.w600, fontSize: context.sp(16)),
-                                    ),
-                                  ),
-                                  SizedBox(width: context.wp(2)),
-                                  Container(
-                                    width: context.wp(7),
-                                    height: context.hp(3.5),
-                                    alignment: Alignment.center,
-                                    decoration: BoxDecoration(color: AppColor.sCard, borderRadius: BorderRadius.circular(6)),
-                                    child: Text(
-                                      "${data.matches?.length}",
-                                      style: tInter(context, color: AppColor.bText, fontWeight: FontWeight.bold, height: 1),
-                                    ),
-                                  ),
-                                  SizedBox(width: context.wp(2)),
-                                  AnimatedSwitcher(
-                                    duration: const Duration(milliseconds: 200),
-                                    transitionBuilder: (child, animation) => ScaleTransition(scale: animation, child: child),
-                                    child: Icon(
-                                      homeCtrl.isExpanded.value && homeCtrl.eIndex.value == index
-                                          ? Icons.keyboard_arrow_up
-                                          : Icons.keyboard_arrow_down,
-                                      color: AppColor.text,
-                                      key: ValueKey(homeCtrl.isExpanded.value),
-                                    ),
-                                  ),
-                                ],
+                          return Padding(
+                            padding: EdgeInsets.only(bottom: context.hp(1)),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: AppColor.card,
+                                borderRadius: BorderRadius.circular(18),
+                                border: Border.all(color: AppColor.divider),
                               ),
-                              children: [
-                                Container(
-                                  color: AppColor.white,
-                                  child: Column(
-                                    children: [
-                                      SizedBox(height: context.sp(1)),
-                                      Divider(color: AppColor.divider, height: 0),
-                                      ListView.separated(
-                                        shrinkWrap: true,
-                                        physics: const NeverScrollableScrollPhysics(),
-                                        itemCount: data.matches?.length ?? 0,
-                                        padding: EdgeInsets.symmetric(horizontal: context.wp(3)),
-                                        itemBuilder: (context, matchIndex) {
-                                          final matchData = data.matches?[matchIndex];
-                                          return GestureDetector(
-                                            onTap: () {
-                                              Navigation.pushNamed(Routes.matchDetails);
-                                            },
-                                            child: Padding(
-                                              padding: EdgeInsets.symmetric(vertical: context.hp(1.5)),
-                                              child: Row(
-                                                children: [
-                                                  Expanded(
-                                                    child: Row(
-                                                      mainAxisAlignment: MainAxisAlignment.end,
-                                                      children: [
-                                                        Flexible(
-                                                          child: Text(
-                                                            "${matchData?.home?.name}",
-                                                            textAlign: TextAlign.end,
-                                                            overflow: TextOverflow.ellipsis,
-                                                            style: tInter(context, fontWeight: FontWeight.w600),
-                                                          ),
-                                                        ),
-                                                        SizedBox(width: context.wp(2)),
-                                                        showFlagImage(
-                                                          context: context,
-                                                          url:
-                                                              "https://images.fotmob.com/image_resources/logo/teamlogo/${matchData?.home?.id}_xsmall.png",
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ),
-
-                                                  Container(
-                                                    width: context.wp(20),
-                                                    alignment: Alignment.center,
-                                                    child: Text(
-                                                      "${matchData?.home?.score ?? 0}  -  ${matchData?.away?.score ?? 0}",
-                                                      style: tInter(context, fontWeight: FontWeight.bold, fontSize: 18),
-                                                    ),
-                                                  ),
-
-                                                  Expanded(
-                                                    child: Row(
-                                                      mainAxisAlignment: MainAxisAlignment.start,
-                                                      children: [
-                                                        showFlagImage(
-                                                          context: context,
-                                                          url:
-                                                              "https://images.fotmob.com/image_resources/logo/teamlogo/${matchData?.away?.id}_xsmall.png",
-                                                        ),
-                                                        SizedBox(width: context.wp(2)),
-                                                        Flexible(
-                                                          child: Text(
-                                                            "${matchData?.away?.name}",
-                                                            textAlign: TextAlign.start,
-                                                            overflow: TextOverflow.ellipsis,
-                                                            style: tInter(context, fontWeight: FontWeight.w600),
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          );
-                                        },
-                                        separatorBuilder: (BuildContext context, int index) {
-                                          return Divider(color: AppColor.divider, height: 0);
-                                        },
-                                      ),
-                                    ],
-                                  ),
+                              child: ExpansionTile(
+                                initiallyExpanded: true,
+                                tilePadding: EdgeInsets.symmetric(horizontal: context.wp(3)),
+                                childrenPadding: EdgeInsets.only(
+                                  left: context.wp(2),
+                                  right: context.wp(2),
+                                  bottom: context.hp(1),
                                 ),
-                              ],
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                collapsedShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                                leading: showLeagueLogo(context: context, url: "${matches.primaryId}"),
+                                title: Text(
+                                  homeCtrl.getLeagueLocalizedNameById(matches.primaryId ?? 0),
+                                  overflow: TextOverflow.ellipsis,
+                                  style: tBarlow(context, fontWeight: FontWeight.bold, fontSize: context.sp(16)),
+                                ),
+                                children:
+                                    matches.matches?.map<Widget>((data) {
+                                      return Padding(
+                                        padding: EdgeInsets.only(bottom: context.hp(0.8)),
+                                        child: GestureDetector(
+                                          onTap: () {
+                                            mdCtrl.league.value = homeCtrl.getLeagueLocalizedNameById(matches.primaryId ?? 0);
+                                            mdCtrl.getNewMD(id: data.id ?? 0);
+                                            mdCtrl.getNewNextMatch(
+                                              homeTeamId: data.home?.id ?? 0,
+                                              awayTeamId: data.away?.id ?? 0,
+                                            );
+
+                                            // mdCtrl.getPOMData(id: data.id);
+                                            // mdCtrl.getMStats(id: data.id, hId: data.homeTeam?.id, aId: data.awayTeam?.id);
+                                            // mdCtrl.getBestPlayer(id: data.id);
+                                            // mdCtrl.getNextMatches(id: data.id);
+                                            // mdCtrl.getRelevantMatches(id: data.id);
+                                            // mdCtrl.getMatchIncident(id: data.id);
+                                            // mdCtrl.getMatchLineup(id: data.id);
+                                            // mdCtrl.getMatchCommentry(id: data.id);
+                                            //
+                                            Navigation.pushNamed(Routes.matchDetails);
+                                          },
+                                          child: Padding(
+                                            padding: EdgeInsets.symmetric(vertical: context.hp(1)),
+                                            child: Row(
+                                              children: [
+                                                // SizedBox(
+                                                //   width: context.wp(15),
+                                                //   child: Center(child: matchStatusWidget(data, context)),
+                                                // ),
+                                                Expanded(
+                                                  child: Row(
+                                                    mainAxisAlignment: MainAxisAlignment.end,
+                                                    children: [
+                                                      Expanded(
+                                                        child: Text(
+                                                          "${data.home?.name}",
+                                                          textAlign: TextAlign.end,
+                                                          overflow: TextOverflow.ellipsis,
+                                                          style: tInter(
+                                                            context,
+                                                            fontWeight: FontWeight.w600,
+                                                            fontSize: context.sp(14),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                      SizedBox(width: context.wp(2)),
+                                                      showTeamLogo(context: context, url: "${data.home?.id}"),
+                                                    ],
+                                                  ),
+                                                ),
+
+                                                SizedBox(
+                                                  width: context.wp(20),
+                                                  child: data.status?.started == false
+                                                      ? Center(child: matchStatusWidget(data.status, context))
+                                                      : Row(
+                                                          mainAxisAlignment: MainAxisAlignment.center,
+                                                          children: [
+                                                            Text(
+                                                              "${data.home?.score}",
+                                                              style: tBarlow(
+                                                                context,
+                                                                fontSize: context.sp(17),
+                                                                fontWeight: FontWeight.w600,
+                                                                color: (data.home?.score ?? 0) > (data.away?.score ?? 0)
+                                                                    ? AppColor.badge
+                                                                    : AppColor.text,
+                                                              ),
+                                                            ),
+                                                            Text(
+                                                              " - ",
+                                                              style: tBarlow(
+                                                                context,
+                                                                fontWeight: FontWeight.w600,
+                                                                color: AppColor.text,
+                                                                fontSize: context.sp(17),
+                                                              ),
+                                                            ),
+                                                            Text(
+                                                              "${data.away?.score}",
+                                                              style: tBarlow(
+                                                                context,
+                                                                fontSize: context.sp(17),
+
+                                                                fontWeight: FontWeight.w600,
+                                                                color: (data.away?.score ?? 0) > (data.home?.score ?? 0)
+                                                                    ? AppColor.badge
+                                                                    : AppColor.text,
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                ),
+
+                                                Expanded(
+                                                  child: Row(
+                                                    mainAxisAlignment: MainAxisAlignment.start,
+                                                    children: [
+                                                      showTeamLogo(context: context, url: "${data.away?.id}"),
+                                                      SizedBox(width: context.wp(2)),
+                                                      Expanded(
+                                                        child: Text(
+                                                          "${data.away?.name}",
+                                                          overflow: TextOverflow.ellipsis,
+                                                          style: tInter(
+                                                            context,
+                                                            fontWeight: FontWeight.w600,
+                                                            fontSize: context.sp(14),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    }).toList() ??
+                                    [],
+                              ),
                             ),
                           );
                         },
                         separatorBuilder: (BuildContext context, int index) {
-                          return SizedBox(height: context.hp(1.3));
+                          return SizedBox(height: context.hp(1));
                         },
                       ),
               );

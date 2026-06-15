@@ -1,72 +1,42 @@
-class MatchesModel {
+class RelevantMatchesModel {
   int? code;
-  Data? data;
+  int? errorCode;
   String? message;
+  List<RMData>? data;
 
-  MatchesModel({code, data, message});
+  RelevantMatchesModel({this.code, this.errorCode, this.message, this.data});
 
-  MatchesModel.fromJson(Map<String, dynamic> json) {
+  RelevantMatchesModel.fromJson(Map<String, dynamic> json) {
     code = json['code'];
-    data = json['data'] != null ? Data.fromJson(json['data']) : null;
+    errorCode = json['error_code'];
     message = json['message'];
+    if (json['data'] != null) {
+      data = <RMData>[];
+      json['data'].forEach((v) {
+        data!.add(RMData.fromJson(v));
+      });
+    }
   }
 
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = <String, dynamic>{};
     data['code'] = code;
-    data['data'] = this.data!.toJson();
+    data['error_code'] = errorCode;
     data['message'] = message;
+    data['data'] = this.data!.map((v) => v.toJson()).toList();
     return data;
   }
 }
 
-class Data {
-  List<Events>? events;
-  List<OtherCompetitions>? otherCompetitions;
-  Pagination? pagination;
-
-  Data({events, otherCompetitions, pagination});
-
-  Data.fromJson(Map<String, dynamic> json) {
-    if (json['events'] != null) {
-      events = <Events>[];
-      json['events'].forEach((v) {
-        events!.add(Events.fromJson(v));
-      });
-    }
-    if (json['otherCompetitions'] != null) {
-      otherCompetitions = <OtherCompetitions>[];
-      json['otherCompetitions'].forEach((v) {
-        otherCompetitions!.add(OtherCompetitions.fromJson(v));
-      });
-    }
-    pagination = json['pagination'] != null ? Pagination.fromJson(json['pagination']) : null;
-  }
-
-  Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = <String, dynamic>{};
-    if (events != null) {
-      data['events'] = events!.map((v) => v.toJson()).toList();
-    }
-    if (otherCompetitions != null) {
-      data['otherCompetitions'] = otherCompetitions!.map((v) => v.toJson()).toList();
-    }
-    if (pagination != null) {
-      data['pagination'] = pagination!.toJson();
-    }
-    return data;
-  }
-}
-
-class Events {
+class RMData {
   String? id;
   int? startTimestamp;
   Tournament? tournament;
-  Status? status;
+  RMStatus? status;
   HomeTeam? homeTeam;
   HomeTeam? awayTeam;
   String? stageId;
-  Time? time;
+  RMTime? time;
   HomeScore? homeScore;
   HomeScore? awayScore;
   String? slug;
@@ -85,49 +55,45 @@ class Events {
   int? awayPenalty;
   int? homeShotOnTarget;
   int? awayShotOnTarget;
-  int? aggHomeScore;
-  int? aggAwayScore;
 
-  Events({
-    id,
-    startTimestamp,
-    tournament,
-    status,
-    homeTeam,
-    awayTeam,
-    stageId,
-    time,
-    homeScore,
-    awayScore,
-    slug,
-    roundInfo,
-    aggScore,
-    winnerCode,
-    lineup,
-    seasonId,
-    homeRedCards,
-    awayRedCards,
-    homeYellowCards,
-    awayYellowCards,
-    homeCornerKicks,
-    awayCornerKicks,
-    homePenalty,
-    awayPenalty,
-    homeShotOnTarget,
-    awayShotOnTarget,
-    aggHomeScore,
-    aggAwayScore,
+  RMData({
+    this.id,
+    this.startTimestamp,
+    this.tournament,
+    this.status,
+    this.homeTeam,
+    this.awayTeam,
+    this.stageId,
+    this.time,
+    this.homeScore,
+    this.awayScore,
+    this.slug,
+    this.roundInfo,
+    this.aggScore,
+    this.winnerCode,
+    this.lineup,
+    this.seasonId,
+    this.homeRedCards,
+    this.awayRedCards,
+    this.homeYellowCards,
+    this.awayYellowCards,
+    this.homeCornerKicks,
+    this.awayCornerKicks,
+    this.homePenalty,
+    this.awayPenalty,
+    this.homeShotOnTarget,
+    this.awayShotOnTarget,
   });
 
-  Events.fromJson(Map<String, dynamic> json) {
+  RMData.fromJson(Map<String, dynamic> json) {
     id = json['id'];
     startTimestamp = json['startTimestamp'];
     tournament = json['tournament'] != null ? Tournament.fromJson(json['tournament']) : null;
-    status = json['status'] != null ? Status.fromJson(json['status']) : null;
+    status = json['status'] != null ? RMStatus.fromJson(json['status']) : null;
     homeTeam = json['homeTeam'] != null ? HomeTeam.fromJson(json['homeTeam']) : null;
     awayTeam = json['awayTeam'] != null ? HomeTeam.fromJson(json['awayTeam']) : null;
     stageId = json['stage_id'];
-    time = json['time'] != null ? Time.fromJson(json['time']) : null;
+    time = json['time'] != null ? RMTime.fromJson(json['time']) : null;
     homeScore = json['homeScore'] != null ? HomeScore.fromJson(json['homeScore']) : null;
     awayScore = json['awayScore'] != null ? HomeScore.fromJson(json['awayScore']) : null;
     slug = json['slug'];
@@ -146,8 +112,6 @@ class Events {
     awayPenalty = json['awayPenalty'];
     homeShotOnTarget = json['homeShotOnTarget'];
     awayShotOnTarget = json['awayShotOnTarget'];
-    aggHomeScore = json['aggHomeScore'];
-    aggAwayScore = json['aggAwayScore'];
   }
 
   Map<String, dynamic> toJson() {
@@ -196,8 +160,6 @@ class Events {
     data['awayPenalty'] = awayPenalty;
     data['homeShotOnTarget'] = homeShotOnTarget;
     data['awayShotOnTarget'] = awayShotOnTarget;
-    data['aggHomeScore'] = aggHomeScore;
-    data['aggAwayScore'] = aggAwayScore;
     return data;
   }
 }
@@ -212,25 +174,19 @@ class Tournament {
   String? primaryColor;
   String? secondaryColor;
   String? competitionAbbr;
-  Section? section;
-  bool? hasBracket;
-  String? seasonId;
-  Category? country;
+  Category? section;
 
   Tournament({
-    id,
-    priority,
-    name,
-    slug,
-    groupNum,
-    category,
-    primaryColor,
-    secondaryColor,
-    competitionAbbr,
-    section,
-    hasBracket,
-    seasonId,
-    country,
+    this.id,
+    this.priority,
+    this.name,
+    this.slug,
+    this.groupNum,
+    this.category,
+    this.primaryColor,
+    this.secondaryColor,
+    this.competitionAbbr,
+    this.section,
   });
 
   Tournament.fromJson(Map<String, dynamic> json) {
@@ -243,10 +199,7 @@ class Tournament {
     primaryColor = json['primary_color'];
     secondaryColor = json['secondary_color'];
     competitionAbbr = json['competition_abbr'];
-    section = json['section'] != null ? Section.fromJson(json['section']) : null;
-    hasBracket = json['hasBracket'];
-    seasonId = json['season_id'];
-    country = json['country'] != null ? Category.fromJson(json['country']) : null;
+    section = json['section'] != null ? Category.fromJson(json['section']) : null;
   }
 
   Map<String, dynamic> toJson() {
@@ -265,11 +218,6 @@ class Tournament {
     if (section != null) {
       data['section'] = section!.toJson();
     }
-    data['hasBracket'] = hasBracket;
-    data['season_id'] = seasonId;
-    if (country != null) {
-      data['country'] = country!.toJson();
-    }
     return data;
   }
 }
@@ -277,34 +225,12 @@ class Tournament {
 class Category {
   String? id;
   String? name;
-  String? slug;
 
-  Category({id, name, slug});
+  Category({this.id, this.name});
 
   Category.fromJson(Map<String, dynamic> json) {
     id = json['id'];
     name = json['name'];
-    slug = json['slug'];
-  }
-
-  Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = <String, dynamic>{};
-    data['id'] = id;
-    data['name'] = name;
-    data['slug'] = slug;
-    return data;
-  }
-}
-
-class Section {
-  String? id;
-  String? name;
-
-  Section({id, name});
-
-  Section.fromJson(Map<String, dynamic> json) {
-    id = json['id'];
-    name = json['name'];
   }
 
   Map<String, dynamic> toJson() {
@@ -315,24 +241,24 @@ class Section {
   }
 }
 
-class Status {
+class RMStatus {
   int? code;
-  String? description;
   String? type;
+  String? description;
 
-  Status({code, description, type});
+  RMStatus({this.code, this.type, this.description});
 
-  Status.fromJson(Map<String, dynamic> json) {
+  RMStatus.fromJson(Map<String, dynamic> json) {
     code = json['code'];
-    description = json['description'];
     type = json['type'];
+    description = json['description'];
   }
 
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = <String, dynamic>{};
     data['code'] = code;
-    data['description'] = description;
     data['type'] = type;
+    data['description'] = description;
     return data;
   }
 }
@@ -340,40 +266,37 @@ class Status {
 class HomeTeam {
   String? id;
   String? name;
-  String? shortName;
   String? slug;
-  String? fullName;
+  String? shortName;
 
-  HomeTeam({id, name, shortName, slug, fullName});
+  HomeTeam({this.id, this.name, this.slug, this.shortName});
 
   HomeTeam.fromJson(Map<String, dynamic> json) {
     id = json['id'];
     name = json['name'];
-    shortName = json['shortName'];
     slug = json['slug'];
-    fullName = json['fullName'];
+    shortName = json['shortName'];
   }
 
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = <String, dynamic>{};
     data['id'] = id;
     data['name'] = name;
-    data['shortName'] = shortName;
     data['slug'] = slug;
-    data['fullName'] = fullName;
+    data['shortName'] = shortName;
     return data;
   }
 }
 
-class Time {
-  Status? status;
+class RMTime {
+  RMStatus? status;
   int? currentPeriodStartTimestamp;
   int? announcedInjuryTime;
 
-  Time({status, currentPeriodStartTimestamp, announcedInjuryTime});
+  RMTime({status, currentPeriodStartTimestamp, announcedInjuryTime});
 
-  Time.fromJson(Map<String, dynamic> json) {
-    status = json['status'] != null ? Status.fromJson(json['status']) : null;
+  RMTime.fromJson(Map<String, dynamic> json) {
+    status = json['status'] != null ? RMStatus.fromJson(json['status']) : null;
     currentPeriodStartTimestamp = json['currentPeriodStartTimestamp'];
     announcedInjuryTime = json['announcedInjuryTime'];
   }
@@ -403,17 +326,17 @@ class HomeScore {
   int? ftScoreOnly;
 
   HomeScore({
-    current,
-    display,
-    period1,
-    period2,
-    corner,
-    yellowCard,
-    redCard,
-    overTimeScore,
-    penaltyScore,
-    overTimeScoreOnly,
-    ftScoreOnly,
+    this.current,
+    this.display,
+    this.period1,
+    this.period2,
+    this.corner,
+    this.yellowCard,
+    this.redCard,
+    this.overTimeScore,
+    this.penaltyScore,
+    this.overTimeScoreOnly,
+    this.ftScoreOnly,
   });
 
   HomeScore.fromJson(Map<String, dynamic> json) {
@@ -450,7 +373,7 @@ class HomeScore {
 class RoundInfo {
   int? round;
 
-  RoundInfo({round});
+  RoundInfo({this.round});
 
   RoundInfo.fromJson(Map<String, dynamic> json) {
     round = json['round'];
@@ -468,7 +391,7 @@ class AggScore {
   int? awayScore;
   String? relatedId;
 
-  AggScore({homeScore, awayScore, relatedId});
+  AggScore({this.homeScore, this.awayScore, this.relatedId});
 
   AggScore.fromJson(Map<String, dynamic> json) {
     homeScore = json['home_score'];
@@ -481,71 +404,6 @@ class AggScore {
     data['home_score'] = homeScore;
     data['away_score'] = awayScore;
     data['related_id'] = relatedId;
-    return data;
-  }
-}
-
-class OtherCompetitions {
-  String? id;
-  String? groupType;
-  String? name;
-  String? countryId;
-  int? matchCount;
-  int? matchLiveCount;
-  List<String>? competitionIds;
-  List<String>? competitionNames;
-  String? categoryId;
-
-  OtherCompetitions({id, groupType, name, countryId, matchCount, matchLiveCount, competitionIds, competitionNames, categoryId});
-
-  OtherCompetitions.fromJson(Map<String, dynamic> json) {
-    id = json['id'];
-    groupType = json['groupType'];
-    name = json['name'];
-    countryId = json['country_id'];
-    matchCount = json['match_count'];
-    matchLiveCount = json['match_live_count'];
-    competitionIds = json['competition_ids'].cast<String>();
-    competitionNames = json['competition_names'].cast<String>();
-    categoryId = json['category_id'];
-  }
-
-  Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = <String, dynamic>{};
-    data['id'] = id;
-    data['groupType'] = groupType;
-    data['name'] = name;
-    data['country_id'] = countryId;
-    data['match_count'] = matchCount;
-    data['match_live_count'] = matchLiveCount;
-    data['competition_ids'] = competitionIds;
-    data['competition_names'] = competitionNames;
-    data['category_id'] = categoryId;
-    return data;
-  }
-}
-
-class Pagination {
-  int? page;
-  int? size;
-  bool? hasNextPage;
-  int? total;
-
-  Pagination({page, size, hasNextPage, total});
-
-  Pagination.fromJson(Map<String, dynamic> json) {
-    page = json['page'];
-    size = json['size'];
-    hasNextPage = json['hasNextPage'];
-    total = json['total'];
-  }
-
-  Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = <String, dynamic>{};
-    data['page'] = page;
-    data['size'] = size;
-    data['hasNextPage'] = hasNextPage;
-    data['total'] = total;
     return data;
   }
 }
